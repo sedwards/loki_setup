@@ -102,7 +102,8 @@
 #include "bools.h"
 #include "loki_launchurl.h"
 
-#if defined(ENABLE_GTK2)
+//#if defined(ENABLE_GTK2)
+#if defined(ENABLE_GTK3)
     #define SETUP_GLADE SETUP_BASE "setup.gtk2.glade"
 #else
     #define SETUP_GLADE SETUP_BASE "setup.glade"

@@ -17,7 +17,7 @@ const char *translation_lookup_table(const char *str);
 #include <libintl.h>
 #define _(String) gettext (String)
 #else
-#warning "Localization subsystem was DISABLED"
+//#warning "Localization subsystem was DISABLED"
 #define _(String) (String)
 #define bindtextdomain(x, y)
 #define textdomain(x)

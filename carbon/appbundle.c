@@ -73,6 +73,7 @@ static int ui_prompt_yn(const char *question, const char *desc)
 
 static int manually_locate_product(const char *name, char *buf, size_t bufsize, const char *title)
 {
+#if 0
     NavDialogCreationOptions dlgopt;
     NavDialogRef dlg;
     NavReplyRecord reply;
@@ -127,6 +128,7 @@ static int manually_locate_product(const char *name, char *buf, size_t bufsize, 
     NavDialogDispose(dlg);
 
     return(retval);
+#endif
 } /* manually_locate_product */
 
 

@@ -184,13 +184,13 @@ case "$target" in
 	LIBDL=""
 	ARCH=`uname -p` ;;
     *-apple-darwin*)
-	STATIC="-static"
+	#STATIC="-static"
 	RDYNAMIC="-Wl,-Sn"
 	BSTATIC=""
 	BDYNAMIC=""
 	REENTRANT=""
-	CFLAGS="$CFLAGS -I/opt/homebrew/opt/ncurses/include -Ddarwin"
-	LDFLAGS="$LDFLAGS -L/opt/homebrew/opt/ncurses/lib -framework Carbon -framework Security -framework IOKit"
+	CFLAGS="$CFLAGS -I/opt/homebrew/opt/ncurses/include -Ddarwin -Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-pointer-sign -Wno-unused-but-set-variable -Wno-int-conversion -Wno-deprecated-declarations -Wno-dangling-else -Wno-unused-variable -Wno-unused-function -Wno-int-to-pointer-cast"
+	LDFLAGS="$LDFLAGS -L/opt/homebrew/opt/ncurses/lib -framework Cocoa -framework Carbon -framework Security -framework IOKit"
 	COMMON_LIBS="carbon/carbonres.o carbon/carbondebug.o carbon/STUPControl.o carbon/YASTControl.o carbon/appbundle.o"
 	ARCH=`uname -p` ;;
     *ppc64* | *powerpc64*)

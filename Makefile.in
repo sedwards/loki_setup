@@ -81,7 +81,7 @@ loki_uninstall.o: uninstall.c
 loki_uninstall: $(LOKI_UNINSTALL_OBJS) $(SETUPDB)/$(arch)/libsetupdb.a
 	$(LD) $(LDFLAGS) -o $@ $(LOKI_UNINSTALL_OBJS) $(GUI_LIBS)
 
-carbon_uninstall.o: uninstall.c
+carbon_uninstall.o: uninstall.m
 	$(LD) $(LDFLAGS) -c -o $@ $^ $(CFLAGS) -DUNINSTALL_CARBONUI -DUNINSTALL_UI -DVERSION=\"$(UNINSTALL_VERSION)\"
 
 carbon_uninstall: $(CARBON_UNINSTALL_OBJS) $(SETUPDB)/$(arch)/libsetupdb.a

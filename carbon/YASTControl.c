@@ -700,6 +700,7 @@ static pascal OSStatus YASTControlCarbonEventHandler(
 				case kEventControlSetData:
 					{	ResType inTagName;
 						Size inBufferSize;
+						Size outBufferSize;
 						void * inBuffer;
 						err = GetEventParameter( event, kEventParamControlDataTag, typeEnumeration, 
 							NULL, sizeof(inTagName), NULL, &inTagName);
@@ -707,8 +708,9 @@ static pascal OSStatus YASTControlCarbonEventHandler(
 							err = GetEventParameter( event, kEventParamControlDataBuffer, typePtr, 
 								NULL, sizeof(inBuffer), NULL, &inBuffer);
 							if (err == noErr) {
-								err = GetEventParameter( event, kEventParamControlDataBufferSize, typeLongInteger, 
-									NULL, sizeof(inBufferSize), NULL, &inBufferSize);
+                                                                err = GetEventParameter(event, kEventParamControlDataBufferSize, cLongInteger, 
+                                                                        NULL, sizeof(outBufferSize), NULL, &outBufferSize);
+
 								if (err == noErr) {
 									err = YASTControlSetData(varsp, inTagName, inBuffer, inBufferSize);
 								}
@@ -728,13 +730,13 @@ static pascal OSStatus YASTControlCarbonEventHandler(
 							err = GetEventParameter( event, kEventParamControlDataBuffer, typePtr, 
 								NULL, sizeof(inBuffer), NULL, &inBuffer);
 							if (err == noErr) {
-								err = GetEventParameter( event, kEventParamControlDataBufferSize, typeLongInteger, 
+								err = GetEventParameter( event, kEventParamControlDataBufferSize, cLongInteger, 
 									NULL, sizeof(inBufferSize), NULL, &inBufferSize);
 								if (err == noErr) {
 									err = YASTControlGetData(varsp, inTagName, inBuffer, inBufferSize, &outBufferSize);
 									if (err == noErr) {
 										err = SetEventParameter( event, kEventParamControlDataBufferSize,
-													typeLongInteger, sizeof(outBufferSize), &outBufferSize);
+													cLongInteger, sizeof(outBufferSize), &outBufferSize);
 									}
 								}
 							}

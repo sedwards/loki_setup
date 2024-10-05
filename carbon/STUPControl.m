@@ -51,11 +51,11 @@
 
 
 #include "STUPControl.h"
-#ifdef __APPLE_CC__
+
+#import <Cocoa/Cocoa.h>
+#import <CoreGraphics/CoreGraphics.h>  // For CGColorRef
+
 #include <Carbon/Carbon.h>
-#else
-#include <Carbon.h>
-#endif
 
 enum {
  kShiftKeyCode = 56
@@ -144,12 +144,18 @@ static void TPActivatePaneText(STPTextPaneVars **tpvars, Boolean setActive) {
 
 /* STPPaneState is used to store the drawing enviroment information */
 
+//typedef struct {
+// RGBColor sForground, sBackground;
+// PenState sPen;
+//} STPPaneState;
+
 typedef struct {
- RGBColor sForground, sBackground;
- PenState sPen;
+    NSColor *sForeground;  // Use NSColor for color management
+    NSColor *sBackground;
+    // No PenState replacement; drawing state is handled separately
 } STPPaneState;
 
-
+#if 0
 /* TPPaneDrawEntry sets the current grafport to the STUP control's
  grafport and it sets up the drawing colors in preparation for
  drawing the text field (after saving the current drawing colors). */
@@ -167,7 +173,37 @@ static void TPPaneDrawEntry(STPTextPaneVars **tpvars, STPPaneState *ps) {
  GetPenState(&ps->sPen);
         SetThemeBackground(kThemeBrushWhite, 32, true);
 }
+#endif
 
+/* TPPaneDrawEntry sets up the drawing environment for the STUP control's
+   drawing and prepares the drawing colors in preparation for rendering the text field. */
+static void TPPaneDrawEntry(STPTextPaneVars **tpvars, STPPaneState *ps) {
+    // Colors: White and Black
+    NSColor *whiteColor = [NSColor whiteColor];
+    NSColor *blackColor = [NSColor blackColor];
+
+    // Set the port to our drawing environment (Cocoa equivalent would be an NSView or context)
+    NSGraphicsContext *currentContext = [NSGraphicsContext currentContext];
+    CGContextRef context = [currentContext CGContext];
+
+    // Save the current graphics state (replaces GetPenState and saving fore/back colors)
+    CGContextSaveGState(context);
+
+    // Set the drawing colors to black and white
+    [blackColor setStroke];  // Set stroke color to black
+    [whiteColor setFill];    // Set fill color to white
+
+    // Fill the background with white (replaces SetThemeBackground)
+    NSRect bounds = NSMakeRect(0, 0, 500, 500); // Adjust bounds as needed
+    NSRectFill(bounds);  // Fill the background with white
+
+    // Perform additional drawing operations here
+
+    // Restore the previous graphics state (replaces SetPenState)
+    CGContextRestoreGState(context);
+}
+
+#if 0
 /* TPPaneDrawExit should be called after TPPaneDrawEntry.  This
  routine restores the drawing colors that were saved away
  by TPPaneDrawEntry. */
@@ -177,8 +213,17 @@ static void TPPaneDrawExit(STPPaneState *ps) {
  RGBBackColor(&ps->sBackground);
  SetPenState(&ps->sPen);
 }
+#endif
 
+/* TPPaneDrawExit should be called after TPPaneDrawEntry. 
+   This routine restores the drawing colors and the pen state saved by TPPaneDrawEntry. */
+static void TPPaneDrawExit(STPPaneState *ps) {
+    // Restore the graphics state (replaces SetPenState)
+    CGContextRef context = [[NSGraphicsContext currentContext] CGContext];
+    CGContextRestoreGState(context);
 
+    // No need to manually restore foreground and background colors as they're part of the saved graphics state
+}
 
 
 /* TPRecalculateTextParams is called after any routine that modifies the contents or

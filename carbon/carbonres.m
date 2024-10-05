@@ -9,6 +9,20 @@
 #include "YASTControl.h"
 #include "carbondebug.h"
 
+#include <Cocoa/Cocoa.h>  // The primary Cocoa framework header
+
+
+/*
+OSStatus InstallEventHandler(
+    EventTargetRef    inTarget,
+    EventHandlerUPP   inHandler,
+    EventTypeSpec*    inEventTypeList,
+    UInt32            inNumTypes,
+    void*             inUserData,
+    EventHandlerRef*  outHandlerRef
+);
+*/
+
 // Size and position constants
 #define WINDOW_WIDTH    		350
 #define WINDOW_HEIGHT   		280
@@ -66,8 +80,20 @@ static void MoveImage(CarbonRes *Res)
 {
     HIRect bounds;
     HIViewRef WindowViewRef;    
+
     // Get window content view
-    HIViewFindByID(HIViewGetRoot(Res->Window), kHIViewWindowContentID, &WindowViewRef);
+    // HIViewFindByID(HIViewGetRoot(Res->Window), kHIViewWindowContentID, &WindowViewRef);
+
+    NSWindow *window = Res->Window; // Assuming Res->Window is an NSWindow in the Cocoa version
+    NSView *rootView = [window contentView];
+    [rootView setTag:100]; // Assign tag 100 to root view
+
+    // Find a subview by tag or identifier (tags are simple numeric identifiers)
+    NSView *view = [rootView viewWithTag:100]; // Replace `someTag` with the appropriate tag number
+
+    // Alternatively, if you're using a custom view class, you can access subviews by identifiers
+
+
     // Get window view bounds...yeah.
     HIViewGetBounds(WindowViewRef, &bounds);
 
@@ -492,7 +518,22 @@ static void AddOptionsButton(OptionsBox *Box, OptionsButton *Button)
 
     // Install click event handler for new button
     EventTypeSpec commSpec = {kEventClassControl, kEventControlHit};    
-    InstallControlEventHandler(Button->Control,
+ //   InstallControlEventHandler(GetControlEventTarget(Button->Control,
+
+#if 0
+EventTypeSpec eventSpec = { kEventClassControl, kEventControlHit }; // Example event types
+EventHandlerUPP handlerUPP = NewEventHandlerUPP(MyEventHandler);    // Replace MyEventHandler with your actual handler
+OSStatus status = InstallEventHandler(
+    GetControlEventTarget(Button->Control),  // Target (the control's event target)
+    handlerUPP,                             // The event handler function
+    &eventSpec,                             // Pointer to the event type spec array
+    1,                                      // Number of event types (in this case, 1)
+    (void *)Button,                         // User data passed to the event handler
+    NULL                                    // No need for a handler reference here, so NULL
+);
+#endif
+
+    InstallEventHandler(GetControlEventTarget(Button->Control),
         NewEventHandlerUPP(OptionButtonEventHandler), 1, &commSpec,
         (void *)Button, NULL);
 }
@@ -564,12 +605,23 @@ CarbonRes *carbon_LoadCarbonRes(int (*CommandEventCallback)(UInt32), void (*Keyb
     EventTypeSpec commSpec = {kEventClassCommand, kEventProcessCommand};
 
     err = CreateNibReference(CFSTR("carbon_ui"), &nibRef);
-    require_noerr(err, CantGetNibRef);
+    //require_noerr(err, CantGetNibRef);
+    if (err != noErr) {
+      // Handle the error (e.g., log it, clean up resources)
+      NSLog(@"Error: Could not get Nib reference");
+      return err; // Or take another appropriate action
+    }
     
     // Once the nib reference is created, set the menu bar. "MainMenu" is the name of the menu bar
     // object. This name is set in InterfaceBuilder when the nib is created.
     err = SetMenuBarFromNib(nibRef, CFSTR("install_menu"));
-    require_noerr(err, CantSetMenuBar);
+    //require_noerr(err, CantSetMenuBar);
+    if (err != noErr) {
+      // Handle the error (e.g., log it, clean up resources)
+      NSLog(@"Error: Could not get Nib reference");
+      return err; // Or take another appropriate action
+    }
+
     NewRes->Menu = AcquireRootMenu();
     /*char InstallNameTemp[255];
     CFStringRef CFInstallName;
@@ -582,13 +634,32 @@ CarbonRes *carbon_LoadCarbonRes(int (*CommandEventCallback)(UInt32), void (*Keyb
     // Then create a window. "MainWindow" is the name of the window object. This name is set in 
     // InterfaceBuilder when the nib is created.
     err = CreateWindowFromNib(nibRef, CFSTR("install_window"), &NewRes->Window);
-    require_noerr(err, CantCreateWindow);
+    //require_noerr(err, CantCreateWindow);
+    if (err != noErr) {
+      NSLog(@"Error: Could not get Nib reference");
+      return err; // Or take another appropriate action
+    }
+
     err = CreateWindowFromNib(nibRef, CFSTR("prompt"), &NewRes->PromptWindow);
-    require_noerr(err, CantCreateWindow);
+    //require_noerr(err, CantCreateWindow);
+    if (err != noErr) {
+      NSLog(@"Error: Could not get Nib reference");
+      return err; // Or take another appropriate action
+    }
+
     err = CreateWindowFromNib(nibRef, CFSTR("readme"), &NewRes->ReadmeWindow);
-    require_noerr(err, CantCreateWindow);
+    //require_noerr(err, CantCreateWindow);
+    if (err != noErr) {
+      NSLog(@"Error: Could not get Nib reference");
+      return err; // Or take another appropriate action
+    }
+
     err = CreateWindowFromNib(nibRef, CFSTR("media"), &NewRes->MediaWindow);
-    require_noerr(err, CantCreateWindow);
+    //require_noerr(err, CantCreateWindow);
+    if (err != noErr) {
+      NSLog(@"Error: Could not create window 'media' CreateWindowFromNib");
+      return err; // Or take another appropriate action
+    }
 
     // Resize and center the window to the appropriate width/height.  Update parameter
     // is false since we haven't shown the window yet.
@@ -621,33 +692,67 @@ CarbonRes *carbon_LoadCarbonRes(int (*CommandEventCallback)(UInt32), void (*Keyb
     ReadmeWindowResizeEventHandler(NULL, NULL, NewRes);
     //EnableControl(DummyControlRef);
 
+#if 0
     // Install default event handler for window since we're not calling
     // RunApplicationEventLoop() to process events.
     InstallStandardEventHandler(GetWindowEventTarget(NewRes->Window));
+
     // Install mouse-down click event for detecting menu clicks
     EventTypeSpec commMouseDownSpec = {kEventClassMouse, kEventMouseDown};
     InstallApplicationEventHandler(NewEventHandlerUPP(MouseDownEventHandler),
         1, &commMouseDownSpec, (void *)NewRes, NULL);
+
     // Setup the event handler associated with the main window
-    InstallWindowEventHandler(NewRes->Window,
+    InstallWindowEventHandler((GetControlEventTarget(NewRes->Window,
         NewEventHandlerUPP(WindowEventHandler), 1, &commSpec, (void *)NewRes,
-        NULL);
+        NULL));
+
     // Setup the event handler associated with the prompt window
-    InstallWindowEventHandler(NewRes->PromptWindow,
+    InstallWindowEventHandler((GetControlEventTarget(NewRes->PromptWindow,
         NewEventHandlerUPP(PromptWindowEventHandler), 1, &commSpec, (void *)NewRes,
-        NULL);
+        NULL));
+
     // Setup the event handler associated with the readme window
-    InstallWindowEventHandler(NewRes->ReadmeWindow,
+    InstallWindowEventHandler((GetControlEventTarget(NewRes->ReadmeWindow,
         NewEventHandlerUPP(ReadmeWindowEventHandler), 1, &commSpec, (void *)NewRes,
-        NULL);
+        NULL));
     EventTypeSpec commReadmeResizeSpec = {kEventClassWindow, kEventWindowBoundsChanged};
-    InstallWindowEventHandler(NewRes->ReadmeWindow,
+    InstallWindowEventHandler((GetControlEventTarget(NewRes->ReadmeWindow,
                               NewEventHandlerUPP(ReadmeWindowResizeEventHandler), 1, &commReadmeResizeSpec, (void *)NewRes,
-                              NULL);
+                              NULL));
+
     // Setup the event handler associated with the readme window
-    InstallWindowEventHandler(NewRes->MediaWindow,
+    InstallWindowEventHandler((GetControlEventTarget(NewRes->MediaWindow,
         NewEventHandlerUPP(MediaWindowEventHandler), 1, &commSpec, (void *)NewRes,
-        NULL);
+        NULL));
+#endif
+
+// Install mouse-down click event for detecting menu clicks
+EventTypeSpec commMouseDownSpec = {kEventClassMouse, kEventMouseDown};
+InstallApplicationEventHandler(NewEventHandlerUPP(MouseDownEventHandler),
+    1, &commMouseDownSpec, (void *)NewRes, NULL);
+
+// Setup the event handler associated with the main window
+InstallWindowEventHandler(NewRes->Window,
+    NewEventHandlerUPP(WindowEventHandler), 1, &commSpec, (void *)NewRes, NULL);
+
+// Setup the event handler associated with the prompt window
+InstallWindowEventHandler(NewRes->PromptWindow,
+    NewEventHandlerUPP(PromptWindowEventHandler), 1, &commSpec, (void *)NewRes, NULL);
+
+// Setup the event handler associated with the readme window
+InstallWindowEventHandler(NewRes->ReadmeWindow,
+    NewEventHandlerUPP(ReadmeWindowEventHandler), 1, &commSpec, (void *)NewRes, NULL);
+
+// Setup the event handler associated with the resize event for the readme window
+EventTypeSpec commReadmeResizeSpec = {kEventClassWindow, kEventWindowBoundsChanged};
+InstallWindowEventHandler(NewRes->ReadmeWindow,
+    NewEventHandlerUPP(ReadmeWindowResizeEventHandler), 1, &commReadmeResizeSpec, (void *)NewRes, NULL);
+
+// Setup the event handler associated with the media window
+InstallWindowEventHandler(NewRes->MediaWindow,
+    NewEventHandlerUPP(MediaWindowEventHandler), 1, &commSpec, (void *)NewRes, NULL);
+
     // Install mouse-down click event for detecting menu clicks
     if(KeyboardEventHandler != NULL)
     {
@@ -982,7 +1087,10 @@ void carbon_HandlePendingEvents(CarbonRes *Res, int sleepIfNone)
     // readme/eula window was opened non-blocking. Handle.
     if ((PromptingWindow != NULL) && (PromptResponseValid))
     {
-        Cursor arrow;
+        //NSCursor arrow;
+
+        NSCursor *arrow = [NSCursor arrowCursor];
+
         WindowRef ref = PromptingWindow;
         PromptingWindow = NULL;
         HideWindow(ref);
@@ -1742,10 +1850,11 @@ void carbon_GetAppPath(char *Dest, int Length)
     strcpy(Dest, TempEXEPath);
 }
 
+#if 0
 int carbon_PromptForPath(unsigned char *Path, int PathLength)
 {
     NavDialogCreationOptions DialogOptions;
-    NavDialogRef Dialog;
+    DialogRef Dialog;
     NavReplyRecord Reply;
     NavUserAction Action;
     int ReturnValue = false;    // By default, user cancels dialog
@@ -1786,6 +1895,53 @@ int carbon_PromptForPath(unsigned char *Path, int PathLength)
     NavDialogDispose(Dialog);
     return ReturnValue;
 }
+#endif
+
+int carbon_PromptForPath(unsigned char *Path, int PathLength)
+{
+    // Cocoa equivalent for prompting the user to select a folder
+    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    
+    // Set options for the dialog
+    [panel setCanChooseFiles:NO];                // Disable file selection
+    [panel setCanChooseDirectories:YES];         // Enable folder selection
+    [panel setAllowsMultipleSelection:NO];       // Single folder selection
+    [panel setPrompt:@"Choose Folder"];          // Set the button title
+    
+    int ReturnValue = false;  // By default, assume user cancels dialog
+    
+    carbon_debug("carbon_PromptForPath()\n");
+    
+    // Run the dialog and check the result
+    NSInteger result = [panel runModal];
+    
+    if (result == NSModalResponseOK) {
+        // User selected a folder
+        NSURL *selectedFolder = [[panel URLs] firstObject]; // Get the selected folder
+
+        if (selectedFolder) {
+            // Convert NSURL path to a C-string, ensuring it fits into the provided buffer
+            NSString *folderPath = [selectedFolder path];
+            const char *folderPathCStr = [folderPath fileSystemRepresentation];
+
+            // Copy the folder path to the provided Path buffer, ensuring not to exceed PathLength
+            strncpy((char *)Path, folderPathCStr, PathLength - 1);
+            Path[PathLength - 1] = '\0'; // Ensure the string is null-terminated
+            
+            // Mark that the user did not cancel
+            ReturnValue = true;
+
+            // Debug output
+            carbon_debug("Folder selected: %s\n", folderPathCStr);
+        }
+    } else {
+        // The user canceled the dialog
+        carbon_debug("User canceled the folder selection.\n");
+    }
+    
+    return ReturnValue;
+}
+
 
 /*void carbon_AddDesktopAlias(const char *Path)
 {

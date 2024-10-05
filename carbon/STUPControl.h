@@ -147,7 +147,7 @@ enum {
  kSTUPResourceType = 'STUP',
  kTEXTResourceType = 'TEXT'
 };
-#pragma options align=mac68k
+//#pragma options align=mac68k
 typedef struct {
  short theFont;
  short theSize;

@@ -1,6 +1,8 @@
 #ifndef __carbondebug_h__
 #define __carbondebug_h__
 
-void carbon_debug(const char *);
+void carbon_debug(const char *format, ...);
+//void carbon_debug(const char *);
+
 
 #endif

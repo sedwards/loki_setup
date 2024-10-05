@@ -381,10 +381,13 @@ void unmount_filesystems(void)
 		mount_cmd = "/usr/sbin/pfs_mount";
 		mnttype = "pfs-rrip";
     } else {
+#if 0
 		fstab = SETUP_FSTAB;
 		mtab = MOUNTS_FILE;
 		mnttype = MNTTYPE_CDROM;
 		mount_cmd = MOUNT_PATH;
+#endif
+                printf("unmount_filesystems -We don't support filesystem manipluation yet\n");
     }
 
 #if defined(__svr4__)
@@ -402,6 +405,7 @@ void unmount_filesystems(void)
  		fclose(mountfp);
 	}
 #elif !defined(__FreeBSD__) // FIXME
+#if 0
     mountfp = setmntent( mtab, "r" );
     if( mountfp != NULL ) {
         while( (mntent = getmntent( mountfp )) != NULL ){
@@ -418,6 +422,8 @@ void unmount_filesystems(void)
         }
         endmntent(mountfp);
     }
+#endif
+    printf("unmount_filesystems - We don't support filesystem manipluation yet\n");
 #endif
 
     mounted_list = NULL;
