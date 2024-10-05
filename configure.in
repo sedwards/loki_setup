@@ -1,5 +1,5 @@
 AC_INIT
-AC_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS([config.h])
 
 dnl Define the release numbers here
 
@@ -314,7 +314,7 @@ AC_CHECK_HEADERS(locale.h)
 AC_CHECK_LIB(gpm, Gpm_Open, USE_GPM=yes)
 
 dnl If NCURSES_MOUSE_VERSION is defined, we don't use GPM, so let's not link it in
-AC_TRY_COMPILE([#include <ncurses.h>], [int n = NCURSES_MOUSE_VERSION;], unset USE_GPM)
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <ncurses.h>]], [[int n = NCURSES_MOUSE_VERSION;]])],[unset USE_GPM],[])
 
 dnl Check for gtk12 libraries in case those are available (FreeBSD)
 AC_CHECK_LIB(glib12, g_log, GTK12="12")
@@ -740,7 +740,8 @@ AC_SUBST(LD)
 AC_SUBST(SETUP_GTK)
 AC_SUBST(GTK_SUBDIR)
 
-AC_OUTPUT(Makefile plugins/Makefile dialog/Makefile)
+AC_CONFIG_FILES([Makefile plugins/Makefile dialog/Makefile])
+AC_OUTPUT
 
 
 
