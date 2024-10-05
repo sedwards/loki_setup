@@ -37,7 +37,7 @@ static int list_width, check_x, item_x, checkflag;
  * Print list item
  */
 static void
-print_item(WINDOW *win, const char **items, int status,
+print_item(LOKI_WINDOW *win, const char **items, int status,
 	   int choice, int selected)
 {
     int i;
@@ -84,7 +84,7 @@ dialog_checklist(const char *title, const char *cprompt, int height, int width,
     int key = 0, button = 0, choice = 0, scrollamt = 0, max_choice, *status;
     int use_width, name_width, text_width;
     int done = FALSE, result = DLG_EXIT_OK;
-    WINDOW *dialog, *list;
+    LOKI_WINDOW *dialog, *list;
     char *prompt = strclone(cprompt);
     const char **buttons = dlg_ok_labels();
 

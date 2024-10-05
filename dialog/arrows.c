@@ -23,7 +23,7 @@
 #include "dialog.h"
 
 void
-dlg_draw_arrows(WINDOW *dialog, int top_arrow, int bottom_arrow, int x, int
+dlg_draw_arrows(LOKI_WINDOW *dialog, int top_arrow, int bottom_arrow, int x, int
 		top, int bottom)
 {
     int cur_x, cur_y;

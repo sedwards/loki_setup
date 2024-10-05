@@ -54,8 +54,8 @@
 #define MIN_WIDE (2 * MAX(strlen(d_label), strlen(f_label)) + 6 * MARGIN + 2 * EXT_WIDE)
 
 typedef struct {
-    WINDOW *par;		/* parent window */
-    WINDOW *win;		/* this window */
+    LOKI_WINDOW *par;		/* parent window */
+    LOKI_WINDOW *win;		/* this window */
     int length;			/* length of the data[] array */
     int offset;			/* index of first item on screen */
     int choice;			/* index of the selection */
@@ -64,7 +64,7 @@ typedef struct {
 } LIST;
 
 static void
-init_list(LIST * list, WINDOW *par, WINDOW *win)
+init_list(LIST * list, LOKI_WINDOW *par, LOKI_WINDOW *win)
 {
     list->par = par;
     list->win = win;
@@ -344,7 +344,7 @@ dialog_fselect(const char *title, const char *path, int height, int width)
     char *input = dialog_vars.input_result;
     char *completed;
     char current[MAX_LEN + 1];
-    WINDOW *dialog, *w_text, *w_dir, *w_file;
+    LOKI_WINDOW *dialog, *w_text, *w_dir, *w_file;
     const char **buttons = dlg_ok_labels();
     char *d_label = _("Directories");
     char *f_label = _("Files");

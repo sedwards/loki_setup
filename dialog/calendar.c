@@ -47,8 +47,8 @@ struct _box;
 typedef int (*BOX_DRAW) (struct _box *, struct tm *);
 
 typedef struct _box {
-    WINDOW *parent;
-    WINDOW *window;
+    LOKI_WINDOW *parent;
+    LOKI_WINDOW *window;
     int x;
     int y;
     int width;
@@ -289,7 +289,7 @@ draw_year(BOX * data, struct tm *current)
 
 static int
 init_object(BOX * data,
-	    WINDOW *parent,
+	    LOKI_WINDOW *parent,
 	    int x, int y,
 	    int width, int height,
 	    BOX_DRAW box_draw,
@@ -366,7 +366,7 @@ dialog_calendar(const char *title,
     BOX dy_box, mn_box, yr_box;
     int key = 0, key2, button = sOK;
     int result = -2;
-    WINDOW *dialog;
+    LOKI_WINDOW *dialog;
     time_t now_time = time((time_t *) 0);
     struct tm current;
     STATES state = sOK;

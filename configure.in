@@ -75,11 +75,6 @@ if test -d /usr/codehost/lib; then
 	LIBS="-L/usr/codehost/lib"
 elif test -d /opt/codehost/lib; then
 	LIBS="-L/opt/codehost/lib"
-elif test -d /sw/lib; then
-	case "$target" in
-	    *-apple-darwin*)
-		LIBS="-L/sw/lib" ;;
-	esac
 else
 	LIBS="$LIBS -L/usr/local/lib"
 fi
@@ -194,8 +189,8 @@ case "$target" in
 	BSTATIC=""
 	BDYNAMIC=""
 	REENTRANT=""
-	CFLAGS="$CFLAGS -I/sw/include -Ddarwin"
-	LDFLAGS="$LDFLAGS -framework Carbon -framework Security -framework IOKit"
+	CFLAGS="$CFLAGS -I/opt/homebrew/opt/ncurses/include -Ddarwin"
+	LDFLAGS="$LDFLAGS -L/opt/homebrew/opt/ncurses/lib -framework Carbon -framework Security -framework IOKit"
 	COMMON_LIBS="carbon/carbonres.o carbon/carbondebug.o carbon/STUPControl.o carbon/YASTControl.o carbon/appbundle.o"
 	ARCH=`uname -p` ;;
     *ppc64* | *powerpc64*)

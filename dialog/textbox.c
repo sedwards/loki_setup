@@ -25,7 +25,7 @@
 
 typedef struct {
     DIALOG_CALLBACK obj;
-    WINDOW *text;
+    LOKI_WINDOW *text;
     const char **buttons;
     int hscroll;
     char line[MAX_LEN + 1];
@@ -414,7 +414,7 @@ print_page(MY_OBJ * obj, int height, int width)
  * Print current position
  */
 static void
-print_position(MY_OBJ * obj, WINDOW *win, int height, int width)
+print_position(MY_OBJ * obj, LOKI_WINDOW *win, int height, int width)
 {
     long fpos;
     int percent;
@@ -436,7 +436,7 @@ print_position(MY_OBJ * obj, WINDOW *win, int height, int width)
  * Display a dialog box and get the search term from user
  */
 static int
-get_search_term(WINDOW *dialog, char *input, int height, int width)
+get_search_term(LOKI_WINDOW *dialog, char *input, int height, int width)
 {
     int box_x, box_y, key = 0, box_height = 3, box_width = 30;
     int offset = 0;
@@ -489,7 +489,7 @@ dialog_textbox(const char *title, const char *file, int height, int width)
 #endif
     char search_term[MAX_LEN + 1];
     MY_OBJ obj;
-    WINDOW *dialog;
+    LOKI_WINDOW *dialog;
     bool found;
     bool done = FALSE;
     bool moved = TRUE;

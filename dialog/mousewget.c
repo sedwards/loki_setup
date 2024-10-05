@@ -30,7 +30,7 @@
 #include <sys/time.h>		/* timeval  for mouse_wgetch() */
 
 int
-mouse_wgetch(WINDOW *win)
+mouse_wgetch(LOKI_WINDOW *win)
 {
     int key;
 

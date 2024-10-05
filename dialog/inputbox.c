@@ -44,7 +44,7 @@ dialog_inputbox(const char *title, const char *cprompt, int height, int width,
     int show_buttons = TRUE, first = TRUE, offset = 0;
     int input_x = 0, key = 0, key2, button = -1;
     char *input = dialog_vars.input_result;
-    WINDOW *dialog;
+    LOKI_WINDOW *dialog;
     char *prompt = strclone(cprompt);
     const char **buttons = dlg_ok_labels();
 

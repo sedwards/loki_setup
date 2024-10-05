@@ -34,7 +34,7 @@ static int menu_width, tag_x, item_x;
  * Print menu item
  */
 static void
-print_item(WINDOW *win,
+print_item(LOKI_WINDOW *win,
 	   const char **items,
 	   int choice, int selected)
 {
@@ -76,7 +76,7 @@ dialog_menu(const char *title, const char *cprompt, int height, int width,
     int max_choice, min_width;
     int found;
     int use_width, name_width, text_width;
-    WINDOW *dialog, *menu;
+    LOKI_WINDOW *dialog, *menu;
     char *prompt = strclone(cprompt);
     const char **buttons = dlg_ok_labels();
 

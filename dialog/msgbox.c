@@ -31,7 +31,7 @@ dialog_msgbox(const char *title, const char *cprompt, int height, int width,
 	      int pauseopt)
 {
     int x, y, key = 0;
-    WINDOW *dialog = 0;
+    LOKI_WINDOW *dialog = 0;
     char *prompt = strclone(cprompt);
     const char **buttons = dlg_ok_label();
 

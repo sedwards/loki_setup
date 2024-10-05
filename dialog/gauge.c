@@ -103,7 +103,7 @@ dialog_gauge(const char *title, const char *prompt, int height,
     return (0);
 }
 
-static WINDOW *dialog = NULL;
+static LOKI_WINDOW *dialog = NULL;
 static int x, y, g_width, g_height;
 
 void dialog_gauge_update(const char *title, const char *prompt, int percent)

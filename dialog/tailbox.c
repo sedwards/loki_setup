@@ -24,7 +24,7 @@
 
 typedef struct {
     DIALOG_CALLBACK obj;
-    WINDOW *text;
+    LOKI_WINDOW *text;
     const char **buttons;
     int hscroll;
     int old_hscroll;
@@ -65,7 +65,7 @@ get_line(MY_OBJ * obj)
  * Print a new line of text.
  */
 static void
-print_line(MY_OBJ * obj, WINDOW *win, int row, int width)
+print_line(MY_OBJ * obj, LOKI_WINDOW *win, int row, int width)
 {
     int i, y, x;
     char *line;
@@ -231,7 +231,7 @@ int
 dialog_tailbox(const char *title, const char *file, int height, int width, int bg_task)
 {
     int x, y, result, thigh;
-    WINDOW *dialog, *text;
+    LOKI_WINDOW *dialog, *text;
     const char **buttons = 0;
     MY_OBJ *obj;
     FILE *fd;

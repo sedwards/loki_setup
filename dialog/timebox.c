@@ -43,8 +43,8 @@ struct _box;
 typedef int (*BOX_DRAW) (struct _box *, struct tm *);
 
 typedef struct _box {
-    WINDOW *parent;
-    WINDOW *window;
+    LOKI_WINDOW *parent;
+    LOKI_WINDOW *window;
     int x;
     int y;
     int width;
@@ -99,7 +99,7 @@ draw_cell(BOX * data)
 
 static int
 init_object(BOX * data,
-	    WINDOW *parent,
+	    LOKI_WINDOW *parent,
 	    int x, int y,
 	    int width, int height,
 	    int period, int value,
@@ -177,7 +177,7 @@ dialog_timebox(const char *title,
     BOX hr_box, mn_box, sc_box;
     int key = 0, key2, button = sOK;
     int result = -2;
-    WINDOW *dialog;
+    LOKI_WINDOW *dialog;
     time_t now_time = time((time_t *) 0);
     struct tm current;
     STATES state = sOK;

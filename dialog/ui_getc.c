@@ -111,7 +111,7 @@ dlg_getc_callbacks(int ch, int *result)
 }
 
 static void
-dlg_raise_window(WINDOW *win)
+dlg_raise_window(LOKI_WINDOW *win)
 {
     touchwin(win);
     wmove(win, getcury(win), getcurx(win));
@@ -126,9 +126,9 @@ dlg_raise_window(WINDOW *win)
  * tailbox.
  */
 int
-dlg_getc(WINDOW *win)
+dlg_getc(LOKI_WINDOW *win)
 {
-    WINDOW *save_win = win;
+    LOKI_WINDOW *save_win = win;
     int ch = ERR;
     int result;
     bool done = FALSE;

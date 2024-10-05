@@ -180,7 +180,7 @@ put_backtitle(void)
  * but will not work on older/buggy ncurses versions.
  */
 void
-attr_clear(WINDOW *win, int height, int width, chtype attr)
+attr_clear(LOKI_WINDOW *win, int height, int width, chtype attr)
 {
     int i, j;
 
@@ -355,7 +355,7 @@ centered(int width, const char *string)
  * *prompt is reached.
  */
 static const char *
-print_line(WINDOW *win, const char *prompt, int rm, int *x)
+print_line(LOKI_WINDOW *win, const char *prompt, int rm, int *x)
 {
     int cur_x = 2;
     const char *wrap_ptr = prompt;
@@ -422,7 +422,7 @@ print_line(WINDOW *win, const char *prompt, int rm, int *x)
 }
 
 static void
-justify_text(WINDOW *win,
+justify_text(LOKI_WINDOW *win,
 	     const char *prompt,
 	     int limit_y,
 	     int limit_x,
@@ -480,7 +480,7 @@ justify_text(WINDOW *win,
  * string may contain embedded newlines.
  */
 void
-print_autowrap(WINDOW *win, const char *prompt, int height, int width)
+print_autowrap(LOKI_WINDOW *win, const char *prompt, int height, int width)
 {
     justify_text(win, prompt,
 		 height,
@@ -506,7 +506,7 @@ auto_size_preformatted(char *prompt, int *height, int *width)
     int ar = dialog_vars.aspect_ratio;
 
     /* Get the initial dimensions */
-    justify_text((WINDOW *) 0, prompt, max_y, max_x, &high, &wide);
+    justify_text((LOKI_WINDOW *) 0, prompt, max_y, max_x, &high, &wide);
     car = (float) (wide / high);
 
     /*
@@ -516,7 +516,7 @@ auto_size_preformatted(char *prompt, int *height, int *width)
     if (car > ar) {
 	diff = car / (float) ar;
 	max_x = wide / diff + 4;
-	justify_text((WINDOW *) 0, prompt, max_y, max_x, &high, &wide);
+	justify_text((LOKI_WINDOW *) 0, prompt, max_y, max_x, &high, &wide);
 	car = (float) wide / high;
     }
 
@@ -527,7 +527,7 @@ auto_size_preformatted(char *prompt, int *height, int *width)
      */
     while (car < ar && max_x < max_width) {
 	max_x += 4;
-	justify_text((WINDOW *) 0, prompt, max_y, max_x, &high, &wide);
+	justify_text((LOKI_WINDOW *) 0, prompt, max_y, max_x, &high, &wide);
 	car = (float) (wide / high);
     }
 
@@ -575,17 +575,17 @@ real_auto_size(const char *title,
 	    double val = dialog_vars.aspect_ratio * strlen(prompt);
 	    int tmp = sqrt(val);
 	    wide = MAX(wide, tmp);
-	    justify_text((WINDOW *) 0, prompt, high, wide, height, width);
+	    justify_text((LOKI_WINDOW *) 0, prompt, high, wide, height, width);
 	} else {
 	    auto_size_preformatted(prompt, height, width);
 	}
     } else {
 	wide = SCOLS - x;
-	justify_text((WINDOW *) 0, prompt, high, wide, height, width);
+	justify_text((LOKI_WINDOW *) 0, prompt, high, wide, height, width);
     }
 
     if (*width < title_length) {
-	justify_text((WINDOW *) 0, prompt, high, title_length, height, width);
+	justify_text((LOKI_WINDOW *) 0, prompt, high, title_length, height, width);
 	*width = title_length;
     }
 
@@ -677,7 +677,7 @@ auto_sizefile(const char *title, const char *file, int *height, int *width, int
  * Draw a rectangular box with line drawing characters
  */
 void
-draw_box(WINDOW *win, int y, int x, int height, int width,
+draw_box(LOKI_WINDOW *win, int y, int x, int height, int width,
 	 chtype boxchar, chtype borderchar)
 {
     int i, j;
@@ -715,7 +715,7 @@ draw_box(WINDOW *win, int y, int x, int height, int width,
  * to the boxes
  */
 void
-draw_shadow(WINDOW *win, int y, int x, int height, int width)
+draw_shadow(LOKI_WINDOW *win, int y, int x, int height, int width)
 {
     int i;
 
@@ -867,7 +867,7 @@ box_y_ordinate(int height)
 }
 
 void
-draw_title(WINDOW *win, const char *title)
+draw_title(LOKI_WINDOW *win, const char *title)
 {
     if (title != NULL) {
 		wattrset(win, title_attr);
@@ -876,7 +876,7 @@ draw_title(WINDOW *win, const char *title)
 }
 
 void
-draw_bottom_box(WINDOW *win)
+draw_bottom_box(LOKI_WINDOW *win)
 {
     int width = getmaxx(win);
     int height = getmaxy(win);
@@ -899,9 +899,9 @@ draw_bottom_box(WINDOW *win)
  * used the panel library, but that is not _always_ available.
  */
 void
-del_window(WINDOW *win)
+del_window(LOKI_WINDOW *win)
 {
-    DIALOG_WINDOWS *p, *q, *r;
+    DIALOG_LOKI_WINDOWS *p, *q, *r;
 
     /* Leave the main window untouched if there are no background windows.
      * We do this so the current window will not be cleared on exit, allowing
@@ -939,11 +939,11 @@ del_window(WINDOW *win)
 /*
  * Create a window, optionally with a shadow.
  */
-WINDOW *
+LOKI_WINDOW *
 new_window(int height, int width, int y, int x)
 {
-    WINDOW *win;
-    DIALOG_WINDOWS *p = (DIALOG_WINDOWS *) calloc(1, sizeof(DIALOG_WINDOWS));
+    LOKI_WINDOW *win;
+    DIALOG_LOKI_WINDOWS *p = (DIALOG_LOKI_WINDOWS *) calloc(1, sizeof(DIALOG_LOKI_WINDOWS));
 
 #ifdef HAVE_COLOR
     if (use_shadow) {
@@ -965,10 +965,10 @@ new_window(int height, int width, int y, int x)
     return win;
 }
 
-WINDOW *
+LOKI_WINDOW *
 sub_window(WINDOW *parent, int height, int width, int y, int x)
 {
-    WINDOW *win;
+    LOKI_WINDOW *win;
 
     if ((win = subwin(parent, height, width, y, x)) == 0) {
 	exiterr("Can't make sub-window at (%d,%d), size (%d,%d).\n",
@@ -1108,7 +1108,7 @@ dlg_trim_string(char *s)
 }
 
 void
-dlg_set_focus(WINDOW *parent, WINDOW *win)
+dlg_set_focus(WINDOW *parent, LOKI_WINDOW *win)
 {
     if (win != 0) {
 	(void) wmove(parent,
@@ -1118,3 +1118,4 @@ dlg_set_focus(WINDOW *parent, WINDOW *win)
 	(void) doupdate();
     }
 }
+

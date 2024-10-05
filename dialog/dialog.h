@@ -38,15 +38,16 @@
 #include <math.h>	/* sqrt() */
 #include <stdarg.h>
 
-#if defined(HAVE_NCURSES_CURSES_H)
-#include <ncurses/curses.h>
-#elif defined(HAVE_NCURSES_H)
+//#define LOKI_WINDOW LOKI_WINDOW
+//#if defined(HAVE_NCURSES_CURSES_H)
+//#include <ncurses/curses.h>
+//#elif defined(HAVE_NCURSES_H)
 #include <ncurses.h>
-#elif defined(ultrix)
-#include <cursesX.h>
-#else
-#include <curses.h>
-#endif
+//#elif defined(ultrix)
+//#include <cursesX.h>
+//#else
+//#include <curses.h>
+//#endif
 
 /* possible conflicts with <term.h> which may be included in <curses.h> */
 #ifdef color_names
@@ -200,10 +201,74 @@
 /* number of attributes */
 #define ATTRIBUTE_COUNT               30
 
+
+
+typedef struct loki_win_st LOKI_WINDOW2;
+//typedef struct _win_st WINDOW;
+
+struct loki_win_st
+{
+        NCURSES_SIZE_T _cury, _curx; /* current cursor position */
+
+        /* window location and size */
+        NCURSES_SIZE_T _maxy, _maxx; /* maximums of x and y, NOT window size */
+        NCURSES_SIZE_T _begy, _begx; /* screen coords of upper-left-hand corner */
+
+        short   _flags;         /* window state flags */
+
+        /* attribute tracking */
+        attr_t  _attrs;         /* current attribute for non-space character */
+        chtype  _bkgd;          /* current background char/attribute pair */
+
+        /* option values set by user */
+        bool    _notimeout;     /* no time out on function-key entry? */
+        bool    _clear;         /* consider all data in the window invalid? */
+        bool    _leaveok;       /* OK to not reset cursor on exit? */
+        bool    _scroll;        /* OK to scroll this window? */
+        bool    _idlok;         /* OK to use insert/delete line? */
+        bool    _idcok;         /* OK to use insert/delete char? */
+        bool    _immed;         /* window in immed mode? (not yet used) */
+        bool    _sync;          /* window in sync mode? */
+        bool    _use_keypad;    /* process function keys into KEY_ symbols? */
+        int     _delay;         /* 0 = nodelay, <0 = blocking, >0 = delay */
+
+        struct ldat *_line;     /* the actual line data */
+
+        /* global screen state */
+        NCURSES_SIZE_T _regtop; /* top line of scrolling region */
+        NCURSES_SIZE_T _regbottom; /* bottom line of scrolling region */
+
+        /* these are used only if this is a sub-window */
+        int     _parx;          /* x coordinate of this window in parent */
+        int     _pary;          /* y coordinate of this window in parent */
+        WINDOW  *_parent;       /* pointer to parent if a sub-window */
+
+        /* these are used only if this is a pad */
+        struct pdat
+        {
+            NCURSES_SIZE_T _pad_y,      _pad_x;
+            NCURSES_SIZE_T _pad_top,    _pad_left;
+            NCURSES_SIZE_T _pad_bottom, _pad_right;
+        } _pad;
+
+        NCURSES_SIZE_T _yoffset; /* real begy is _begy + _yoffset */
+
+#if NCURSES_WIDECHAR
+        cchar_t  _bkgrnd;       /* current background char/attribute pair */
+#if 0
+        int     _color;         /* current color-pair for non-space character */
+#endif
+#endif
+};
+
+typedef struct loki_win_st LOKI_WINDOW;
+
+
+
 typedef struct _dlg_callback {
     struct _dlg_callback *next;
     FILE *input;
-    WINDOW *win;
+    LOKI_WINDOW *win;
     bool keep_bg;	/* keep in background, on exit */
     bool bg_task;	/* true if this is background task */
     bool (*handle_getc)(struct _dlg_callback *p, int ch, int *result);
@@ -211,9 +276,9 @@ typedef struct _dlg_callback {
 
 typedef struct _dlg_windows {
     struct _dlg_windows *next;
-    WINDOW *normal;
-    WINDOW *shadow;
-} DIALOG_WINDOWS;
+    LOKI_WINDOW *normal;
+    LOKI_WINDOW *shadow;
+} DIALOG_LOKI_WINDOWS;
 
 /*
  * Global variables, which are initialized as needed
@@ -221,7 +286,7 @@ typedef struct _dlg_windows {
 typedef struct {
     DIALOG_CALLBACK *getc_callbacks;
     DIALOG_CALLBACK *getc_redirect;
-    DIALOG_WINDOWS *all_windows;
+    DIALOG_LOKI_WINDOWS *all_windows;
 } DIALOG_STATE;
 
 extern DIALOG_STATE dialog_state;
@@ -284,7 +349,7 @@ extern void create_rc (const char *filename);
 extern int parse_rc (void);
 #endif
 
-void attr_clear (WINDOW * win, int height, int width, chtype attr);
+void attr_clear (LOKI_WINDOW * win, int height, int width, chtype attr);
 void dialog_clear (void);
 void end_dialog (void);
 int init_dialog (void);
@@ -307,19 +372,19 @@ int calc_listw(int item_no, const char **items, int group);
 char *strclone(const char *cprompt);
 int box_x_ordinate(int width);
 int box_y_ordinate(int height);
-void del_window(WINDOW *win);
-void draw_title(WINDOW *win, const char *title);
-void draw_bottom_box(WINDOW *win);
-WINDOW * new_window (int y, int x, int height, int width);
-WINDOW * sub_window (WINDOW *win, int y, int x, int height, int width);
+void del_window(LOKI_WINDOW *win);
+void draw_title(LOKI_WINDOW *win, const char *title);
+void draw_bottom_box(LOKI_WINDOW *win);
+LOKI_WINDOW * new_window (int y, int x, int height, int width);
+LOKI_WINDOW * sub_window (WINDOW *win, int y, int x, int height, int width);
 
 #ifdef HAVE_COLOR
 void color_setup (void);
-void draw_shadow (WINDOW * win, int height, int width, int y, int x);
+void draw_shadow (LOKI_WINDOW * win, int height, int width, int y, int x);
 #endif
 
-void print_autowrap(WINDOW *win, const char *prompt, int height, int width);
-void draw_box (WINDOW * win, int y, int x, int height, int width, chtype boxchar,
+void print_autowrap(LOKI_WINDOW *win, const char *prompt, int height, int width);
+void draw_box (LOKI_WINDOW * win, int y, int x, int height, int width, chtype boxchar,
 		chtype borderchar);
 
 int dialog_yesno (const char *title, const char *cprompt, int height, int width, int dftno);
@@ -346,7 +411,7 @@ int dialog_calendar (const char *title, const char *subtitle, int height, int wi
 int dialog_timebox (const char *title, const char *subtitle, int height, int width, int hour, int minute, int second);
 
 /* arrows.c */
-void dlg_draw_arrows(WINDOW *dialog, int top_arrow, int bottom_arrow, int x, int top, int bottom);
+void dlg_draw_arrows(LOKI_WINDOW *dialog, int top_arrow, int bottom_arrow, int x, int top, int bottom);
 
 /* button.c */
 extern const char ** dlg_exit_label(void);
@@ -357,14 +422,14 @@ extern int dlg_char_to_button(int ch, const char **labels);
 extern int dlg_button_x_step(const char **labels, int limit, int *gap, int *margin, int *step);
 extern void dlg_button_layout(const char **labels, int *limit);
 extern void dlg_button_sizes(const char **labels, int vertical, int *longest, int *length);
-extern void dlg_draw_buttons(WINDOW *win, int y, int x, const char **labels, int selected, int vertical, int limit);
+extern void dlg_draw_buttons(LOKI_WINDOW *win, int y, int x, const char **labels, int selected, int vertical, int limit);
 
 /* inputstr.c */
 extern bool dlg_edit_string(char *string, int *offset, int key, bool force);
-extern void dlg_show_string(WINDOW *win, char *string, int offset, chtype attr, int y_base, int x_base, int x_last, bool hidden, bool force);
+extern void dlg_show_string(LOKI_WINDOW *win, char *string, int offset, chtype attr, int y_base, int x_base, int x_last, bool hidden, bool force);
 
 /* ui_getc.c */
-extern int dlg_getc(WINDOW *win);
+extern int dlg_getc(LOKI_WINDOW *win);
 extern int dlg_getc_callbacks(int ch, int *result);
 extern void dlg_add_callback(DIALOG_CALLBACK *p);
 extern void dlg_remove_callback(DIALOG_CALLBACK *p);
@@ -373,7 +438,7 @@ extern void killall_bg(int *retval);
 /* util.c */
 extern int dlg_default_item(const char **items, int llen);
 extern void dlg_item_help(const char *txt);
-extern void dlg_set_focus(WINDOW *parent, WINDOW *win);
+extern void dlg_set_focus(WINDOW *parent, LOKI_WINDOW *win);
 extern void dlg_trim_string(char *src);
 #ifdef HAVE_STRCASECMP
 #define dlg_strcmp(a,b) strcasecmp(a,b)
@@ -426,7 +491,7 @@ void mouse_setbase (int x, int y);
 #endif
 
 extern mseRegion *mouse_region (int y, int x);
-extern int mouse_wgetch (WINDOW *);
+extern int mouse_wgetch (LOKI_WINDOW *);
 
 #define mouse_mkbutton(y,x,len,code) mouse_mkregion(y,x,1,len,code);
 

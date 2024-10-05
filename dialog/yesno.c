@@ -29,7 +29,7 @@ int
 dialog_yesno(const char *title, const char *cprompt, int height, int width, int dft_no)
 {
     int x, y, key = 0, key2, button = dft_no;
-    WINDOW *dialog = 0;
+    LOKI_WINDOW *dialog = 0;
     char *prompt = strclone(cprompt);
     const char **buttons = dlg_yes_labels();
 

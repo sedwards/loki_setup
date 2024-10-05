@@ -40,7 +40,7 @@ center_label(char *buffer, int longest, const char *label)
  * Print a button
  */
 static void
-print_button(WINDOW *win, const char *label, int y, int x, int selected)
+print_button(LOKI_WINDOW *win, const char *label, int y, int x, int selected)
 {
     int i, temp;
     chtype key_attr = (selected
@@ -163,7 +163,7 @@ dlg_button_layout(const char **labels, int *limit)
  * Print a list of buttons at the given position.
  */
 void
-dlg_draw_buttons(WINDOW *win,
+dlg_draw_buttons(LOKI_WINDOW *win,
 		 int y, int x,
 		 const char **labels,
 		 int selected,
