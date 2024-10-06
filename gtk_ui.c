@@ -408,27 +408,34 @@ void setup_close_view_readme_slot( GtkWidget* w, gpointer data )
     setup_destroy_view_readme_slot(w, data);
 }
 
-void setup_destroy_view_readme_slot( GtkWidget* w, gpointer data )
+void setup_destroy_view_readme_slot(GtkWidget* w, gpointer data)
 {
     GtkWidget *widget;
 
-    if ( setup_glade_readme ) {
-        widget = glade_xml_get_widget(setup_glade_readme, "readme_dialog");
-		if (widget)
-			gtk_widget_hide(widget);
-		GLADE_XML_UNREF(setup_glade_readme);
+    if (setup_glade_readme) {
+        // Hide the readme dialog
+        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade_readme, "readme_dialog"));
+        if (widget) {
+            gtk_widget_hide(widget);
+        }
+
+        // Free the builder and reset the pointer
+        g_object_unref(setup_glade_readme);
         setup_glade_readme = NULL;
+
         /*
-         * re-enable the 'view readme buttons...all 3 of them since we don't
-         * know where we are
+         * Re-enable the 'view readme' buttons (all 3 of them)
          */
-        widget = glade_xml_get_widget(setup_glade, "button_readme");
+        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "button_readme"));
         gtk_widget_set_sensitive(widget, TRUE);
-        widget = glade_xml_get_widget(setup_glade, "class_readme");
+
+        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "class_readme"));
         gtk_widget_set_sensitive(widget, TRUE);
-        widget = glade_xml_get_widget(setup_glade, "view_readme_progress_button");
+
+        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "view_readme_progress_button"));
         gtk_widget_set_sensitive(widget, TRUE);
-        widget = glade_xml_get_widget(setup_glade, "view_readme_end_button");
+
+        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "view_readme_end_button"));
         gtk_widget_set_sensitive(widget, TRUE);
     }
 }
@@ -697,7 +704,7 @@ static void check_install_button(void)
     GtkWidget *options_status;
     GtkWidget *install_widget;
 
-	message = check_for_installation(cur_info, NULL);
+    message = check_for_installation(cur_info, NULL);
 
     /* Get the appropriate widgets and set the new state */
     options_status = glade_xml_get_widget(setup_glade, "options_status");
@@ -719,10 +726,16 @@ static void update_size(void)
     GtkWidget *widget;
     char text[32];
 
-    widget = glade_xml_get_widget(setup_glade, "label_install_size");
-    if ( widget ) {
-        snprintf(text, sizeof(text), _("%d MB"), (int) BYTES2MB(cur_info->install_size));
+    // Use GtkBuilder to get the "label_install_size" widget
+    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "label_install_size"));
+    if (widget) {
+        // Format the install size as MB
+        snprintf(text, sizeof(text), _("%d MB"), (int)BYTES2MB(cur_info->install_size));
+
+        // Update the label text
         gtk_label_set_text(GTK_LABEL(widget), text);
+
+        // Check if the install button should be enabled
         check_install_button();
     }
 }
@@ -731,12 +744,21 @@ static void update_space(void)
 {
     GtkWidget *widget;
     char text[32];
+    int diskspace;
 
-    widget = glade_xml_get_widget(setup_glade, "label_free_space");
-    if ( widget ) {
+    // Use GtkBuilder to get the "label_free_space" widget
+    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "label_free_space"));
+    if (widget) {
+        // Detect available disk space
         diskspace = detect_diskspace(cur_info->install_path);
+
+        // Format the available space as MB
         snprintf(text, sizeof(text), _("%d MB"), diskspace);
+
+        // Update the label text
         gtk_label_set_text(GTK_LABEL(widget), text);
+
+        // Check if the install button should be enabled
         check_install_button();
     }
 }
@@ -748,17 +770,21 @@ static void empty_container(GtkWidget *widget, gpointer data)
 
 static void enable_tree(xmlNodePtr node, GtkWidget *window)
 {
-  if ( strcmp((char *)node->name, "option") == 0 ) {
-	  GtkWidget *button = (GtkWidget*)gtk_object_get_data(GTK_OBJECT(window),
-														  get_option_name(cur_info, node, NULL, 0));
-	  if(button)
-		  gtk_widget_set_sensitive(button, TRUE);
-  }
-  node = XML_CHILDREN(node);
-  while ( node ) {
-	  enable_tree(node, window);
-	  node = node->next;
-  }
+    if (strcmp((char *)node->name, "option") == 0) {
+        // Use g_object_get_data() instead of gtk_object_get_data() in GTK3
+        GtkWidget *button = (GtkWidget*)g_object_get_data(G_OBJECT(window),
+                                                          get_option_name(cur_info, node, NULL, 0));
+        if (button) {
+            gtk_widget_set_sensitive(button, TRUE);
+        }
+    }
+
+    // Recursively enable child nodes
+    node = XML_CHILDREN(node);
+    while (node) {
+        enable_tree(node, window);
+        node = node->next;
+    }
 }
 
 gboolean on_manpage_entry_focus_out_event(GtkWidget *widget,
@@ -995,9 +1021,9 @@ static yesno_answer gtkui_prompt(const char *txt, yesno_answer suggest)
 
 #else
     GtkWidget *label, *yes_button, *no_button, *ok_button;
-       
+ 
     /* Create the widgets */
-    
+ 
     dialog = gtk_dialog_new();
     label = gtk_label_new (txt);
 	gtk_misc_set_padding(GTK_MISC(label), 8, 8);
@@ -1064,9 +1090,9 @@ static void message_dialog(const char *txt, const char *title)
 	gtk_widget_destroy(dialog);
 #else
 	GtkWidget *label, *ok_button;
-       
+ 
     /* Create the widgets */
-    
+ 
     dialog = gtk_dialog_new();
     label = gtk_label_new (txt);
     ok_button = gtk_button_new_with_label("OK");
@@ -1118,40 +1144,50 @@ static inline int str_in_g_list(const char *str, GList *list)
 //   That is, if we don't want to make a symlink, but
 //   we want to start something as an option at the end
 //   the installation, let's enable that.
+
 static void check_program_to_start(install_info *info)
 {
-    int i;
     xmlNodePtr node;
 
     /*----------------------------------------------------------------------
-    **  Find a program to start, if any.
-    **--------------------------------------------------------------------*/
-    for (i = 0, node = XML_CHILDREN(XML_ROOT(cur_info->config)); node;  node = node->next) {
+    **  Find a program to start, if any, by traversing the config's children.
+    **----------------------------------------------------------------------*/
+    for (node = XML_CHILDREN(XML_ROOT(cur_info->config)); node; node = node->next) {
         if (strcmp((char *)node->name, "program_to_start") == 0) {
-            /* Retrieve the value - note that it's up to us to free
-                the memory, which means we can use it without copying it */
+            // Retrieve the program content, making sure to free the memory later.
             char *content = (char *)xmlNodeGetContent(node);
-            char *p, *q;
             if (content) {
-                if ( info->installed_symlink && info->symlinks_path && *info->symlinks_path ) {
+                // Warn if symlinks are present since program_to_start is invalid in this case.
+                if (info->installed_symlink && info->symlinks_path && *info->symlinks_path) {
                     log_warning(_("Warning: program_to_start is only meaningful when there are no symlinks.\n"));
+                    g_free(content);
                     return;
                 }
 
-				g_strstrip(content);
-                for (p = content, q = info->play_binary; (q - info->play_binary) < (PATH_MAX - 20) && *p; )
-                {
-                    if (memcmp(p, "$INSTALLDIR", 11) == 0) {
-                        strcpy(q, info->install_path);
-                        q += strlen(info->install_path);
-                        p += 11;
-                        if (*(q - 1) == '/' && *p == '/')
-                            p++;
+                // Strip any leading/trailing whitespace from the content.
+                g_strstrip(content);
+
+                // Replace $INSTALLDIR with the actual install path.
+                char *content_ptr = content;
+                char *binary_ptr = info->play_binary;
+ 
+                while ((binary_ptr - info->play_binary) < (PATH_MAX - 20) && *content_ptr) {
+                    if (memcmp(content_ptr, "$INSTALLDIR", 11) == 0) {
+                        // Copy the install path to the destination buffer.
+                        strcpy(binary_ptr, info->install_path);
+                        binary_ptr += strlen(info->install_path);
+                        content_ptr += 11;
+
+                        // Avoid double slashes if the install path and content both have a '/'
+                        if (*(binary_ptr - 1) == '/' && *content_ptr == '/')
+                            content_ptr++;
+                    } else {
+                        // Copy regular characters.
+                        *binary_ptr++ = *content_ptr++;
                     }
-                    else
-                        *q++ = *p++;
                 }
 
+                // Free the retrieved content and return.
                 g_free(content);
                 return;
             }
@@ -1162,60 +1198,63 @@ static void check_program_to_start(install_info *info)
 // FIXME: this does not belong into the UI
 static void init_install_path(void)
 {
-    GtkWidget* widget;
-    GList* list;
-    int i;
-    char path[PATH_MAX];
-    xmlNodePtr node;
-    char *homedir = getenv("HOME");
+    GtkWidget *install_path_widget;
+    GList *install_path_list = NULL;
+    int path_count = 0;
+    char expanded_path[PATH_MAX];
+    xmlNodePtr config_node;
+    char *home_directory = getenv("HOME");
 
-    widget = glade_xml_get_widget(setup_glade, "install_path");
-    
-    if ( GetProductIsMeta(cur_info) ) {
-		gtk_widget_hide(widget);
-		return;
+    // Get the install path widget from GtkBuilder
+    install_path_widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "install_path"));
+
+    // If the product is a meta-installer, hide the install path widget
+    if (GetProductIsMeta(cur_info)) {
+        gtk_widget_hide(install_path_widget);
+        return;
     }
 
-    list = NULL;
-    if (access(cur_info->install_path, W_OK) == 0)
-        list = g_list_append( list, cur_info->install_path);
+    // Add the current install path to the list if it is writable
+    if (access(cur_info->install_path, W_OK) == 0) {
+        install_path_list = g_list_append(install_path_list, cur_info->install_path);
+    }
 
     /*----------------------------------------------------------------------
-    **  Retrieve the list of install paths from the config file, if we can
-    **--------------------------------------------------------------------*/
-    for (i = 0, node = XML_CHILDREN(XML_ROOT(cur_info->config)); node;  node = node->next) {
-        if (strcmp((char *)node->name, "install_drop_list") == 0) {
-            /* Retrieve the value - note that it's up to us to free
-                the memory, which means we can use it without copying it */
-            char *content = (char *)xmlNodeGetContent(node);
-            char *p;
-            if (content) {
-                for (p = strtok(content, "\n\t \r\b"); p; 
-					 p = strtok(NULL,"\n\t \r\b" )) {
-                    /*--------------------------------------------------------
-                    **  Expand any ~s in the path
-                    **------------------------------------------------------*/
-                    char *temp_buf;
-                    temp_buf = malloc(PATH_MAX);
-                    if (! temp_buf) {
-                        fprintf(stderr, _("Fatal error:  out of memory\n"));
+    **  Retrieve the list of install paths from the configuration file.
+    **----------------------------------------------------------------------*/
+    for (config_node = XML_CHILDREN(XML_ROOT(cur_info->config)); config_node; config_node = config_node->next) {
+
+        if (strcmp((char *)config_node->name, "install_drop_list") == 0) {
+            // Get the content of the install_drop_list node
+            char *install_paths_content = (char *)xmlNodeGetContent(config_node);
+
+            if (install_paths_content) {
+                // Tokenize the content to retrieve individual install paths
+                char *token = strtok(install_paths_content, "\n\t \r\b");
+
+                while (token) {
+                    // Expand any "~" characters to the home directory
+                    char *temp_buf = malloc(PATH_MAX);
+                    if (!temp_buf) {
+                        fprintf(stderr, _("Fatal error: out of memory\n"));
                         return;
                     }
-                    expand_home(cur_info, p, temp_buf);
-					
-					// install_paths[last one - 1] --> home directory
-					// install_paths[ last one ] ----> NULL terminate
-					if (i >= MAX_INSTALL_PATHS - 2) {
-                        fprintf(stderr, 
-								_("Error: maximum of %d install_path entries exceeded\n"),
-								MAX_INSTALL_PATHS -2);
-						free (temp_buf);
-						//return;
-						goto enough_of_config;
+                    expand_home(cur_info, token, temp_buf);
+
+                    // Ensure we don't exceed the maximum number of install paths
+                    if (path_count >= MAX_INSTALL_PATHS - 2) {
+                        fprintf(stderr, _("Error: maximum of %d install_path entries exceeded\n"), MAX_INSTALL_PATHS - 2);
+                        free(temp_buf);
+                        goto enough_of_config;
                     }
 
-                    install_paths[i++] = temp_buf;
+                    // Add the expanded path to the install paths array
+                    install_paths[path_count++] = temp_buf;
+
+                    // Get the next token
+                    token = strtok(NULL, "\n\t \r\b");
                 }
+                g_free(install_paths_content); // Free the content after use
             }
         }
     }
@@ -1226,48 +1265,50 @@ enough_of_config:
     **  If no installation paths were specified, use the default
     **      values that are hard coded in.
     **--------------------------------------------------------------------*/
-    if (i == 0) {
-        for (i = 0; default_install_paths[i]; ++i) {
-            install_paths[i] = default_install_paths[i];
+    if (path_count == 0) {
+        for (path_count = 0; default_install_paths[path_count]; ++path_count) {
+            install_paths[path_count] = default_install_paths[path_count];
 	}
     }
 
     /*----------------------------------------------------------------------
     **  Add in the home directory, as a last-resort.
     **--------------------------------------------------------------------*/
-    if (homedir != NULL)
-        install_paths[i++] = homedir;
+    if (home_directory != NULL)
+        install_paths[path_count++] = home_directory;
 
     /*----------------------------------------------------------------------
     **  Terminate the array
     **--------------------------------------------------------------------*/
-    install_paths[i] = NULL;
+    install_paths[path_count] = NULL;
 
     /*----------------------------------------------------------------------
     **  Now translate the default install paths into the gtk list,
     **      avoiding the current default value (which is already in the list)
     **--------------------------------------------------------------------*/
-    for ( i=0; install_paths[i]; ++i ) {
-        snprintf(path, sizeof(path), "%s/%s", install_paths[i], GetProductName(cur_info));
-        if ((!str_in_g_list(path, list)) && (access(install_paths[i], W_OK) == 0)) {
-            list = g_list_append( list, strdup(path));
+    for ( path_count=0; install_paths[path_count]; ++path_count ) {
+        snprintf(path_count, sizeof(path_count), "%s/%s", install_paths[path_count], GetProductName(cur_info));
+        if ((!str_in_g_list(expanded_path, install_path_list)) && (access(install_paths[path_count], W_OK) == 0)) {
+            install_path_list = g_list_append( install_path_list, strdup(expanded_path));
         }
     }
-    gtk_combo_set_popdown_strings( GTK_COMBO(widget), list );
-    /* !!! FIXME: Should we g_list_free ( list ) or not? */
+    gtk_combo_set_popdown_strings( GTK_COMBO(install_path_widget), install_path_list );
+    /* !!! FIXME: Should we g_list_free ( install_path_list ) or not? */
     
-    /*gtk_entry_set_text( GTK_ENTRY(GTK_COMBO(widget)->entry), cur_info->install_path );*/
-//    gtk_entry_set_text( GTK_ENTRY(GTK_COMBO(widget)->entry), list->data );
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(widget), list->data);
+    /*gtk_entry_set_text( GTK_ENTRY(GTK_COMBO(install_path_widget)->entry), cur_info->install_path );*/
+//    gtk_entry_set_text( GTK_ENTRY(GTK_COMBO(install_path_widget)->entry), list->data );
+
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(install_path_widget), install_path_list->data);
+
     // Uncomment if edit needed
-    //GtkEntry *entry = gtk_bin_get_child(GTK_BIN(widget));
+    //GtkEntry *entry = gtk_bin_get_child(GTK_BIN(install_path_widget));
     //gtk_entry_set_text(entry, list->data);
 
     /* cheat. Make the first entry the default for IsReadyToInstall(). */
-    if(cur_info->install_path != list->data)
-		strncpy(cur_info->install_path, list->data, sizeof (cur_info->install_path));
+    if(cur_info->install_path != install_path_list->data)
+		strncpy(cur_info->install_path, install_path_list->data, sizeof (cur_info->install_path));
 
-    gtk_combo_set_use_arrows( GTK_COMBO(widget), 0);
+    gtk_combo_set_use_arrows( GTK_COMBO(install_path_widget), 0);
 }
 
 static void init_man_path(void)
@@ -1992,6 +2033,114 @@ static void gtkui_idle(install_info *info)
 #endif
 }
 
+
+static install_state gtkui_setup(install_info *info)
+{
+    GtkWidget *window;
+    GtkWidget *options;
+    xmlNodePtr node;
+
+    // Use GtkBuilder to get the setup window
+    window = GTK_WIDGET(gtk_builder_get_object(setup_glade, "setup_window"));
+
+    // Make sure the window is being shown
+    gtk_widget_show(window);
+
+    // Set paths regardless of whether we are in express or not
+    init_install_path();
+    init_binary_path();
+    init_man_path();
+
+    if (express_setup) {
+        GtkWidget *notebook = GTK_WIDGET(gtk_builder_get_object(setup_glade, "setup_notebook"));
+        gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), COPY_PAGE);
+
+        // Must hide cancel button if reinstalling/upgrading, or install can be mangled
+        if (info->options.reinstalling) {
+            GtkWidget *button = GTK_WIDGET(gtk_builder_get_object(setup_glade, "cancel_progress_button"));
+            gtk_widget_hide(button);
+        }
+
+        return cur_state = SETUP_INSTALL;
+    }
+
+    // Go through the install options
+    options = GTK_WIDGET(gtk_builder_get_object(setup_glade, "option_vbox"));
+    gtk_container_foreach(GTK_CONTAINER(options), empty_container, options);
+    info->install_size = 0;
+    node = XML_CHILDREN(XML_ROOT(info->config));
+    radio_list = NULL;
+    in_setup = TRUE;
+
+    while (node) {
+        if (!strcmp((char *)node->name, "option")) {
+            parse_option(info, NULL, node, window, options, 0, NULL, 0, 0, NULL);
+        } else if (!strcmp((char *)node->name, "exclusive")) {
+            xmlNodePtr child;
+            GSList *list = NULL;
+            int reinst = GetReinstallNode(info, node);
+
+            for (child = XML_CHILDREN(node); child; child = child->next) {
+                parse_option(info, NULL, child, window, options, 0, NULL, 1, reinst, &list);
+            }
+        } else if (!strcmp((char *)node->name, "component")) {
+            char *arch = (char *)xmlGetProp(node, BAD_CAST "arch");
+            char *libc = (char *)xmlGetProp(node, BAD_CAST "libc");
+            char *distro = (char *)xmlGetProp(node, BAD_CAST "distro");
+            char *cond = (char *)xmlGetProp(node, BAD_CAST "if");
+
+            if (match_arch(info, arch) &&
+                match_libc(info, libc) &&
+                match_distro(info, distro) &&
+                match_condition(cond)) {
+                xmlNodePtr child;
+                char *name = (char *)xmlGetProp(node, BAD_CAST "name");
+
+                if (xmlGetProp(node, BAD_CAST "showname")) {
+                    GtkWidget *widget = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+                    gtk_box_pack_start(GTK_BOX(options), widget, FALSE, FALSE, 0);
+                    gtk_widget_show(widget);
+
+                    widget = gtk_label_new(name);
+                    gtk_box_pack_start(GTK_BOX(options), widget, FALSE, FALSE, 10);
+                    gtk_widget_show(widget);
+                }
+
+                for (child = XML_CHILDREN(node); child; child = child->next) {
+                    if (!strcmp((char *)child->name, "option")) {
+                        parse_option(info, name, child, window, options, 0, NULL, 0, 0, NULL);
+                    } else if (!strcmp((char *)child->name, "exclusive")) {
+                        xmlNodePtr child2;
+                        GSList *list = NULL;
+                        int reinst = GetReinstallNode(info, child);
+
+                        for (child2 = XML_CHILDREN(child); child2; child2 = child2->next) {
+                            parse_option(info, name, child2, window, options, 0, NULL, 1, reinst, &list);
+                        }
+                    }
+                }
+                xmlFree(name);
+            }
+            xmlFree(arch);
+            xmlFree(libc);
+            xmlFree(distro);
+            xmlFree(cond);
+        }
+        node = node->next;
+    }
+
+    // Update size and space, and initialize menu items
+    update_size();
+    update_space();
+    init_menuitems_option(info);
+
+    in_setup = FALSE;
+
+    return iterate_for_state();
+}
+
+
+#if 0
 static install_state gtkui_setup(install_info *info)
 {
     GtkWidget *window;
@@ -2081,6 +2230,7 @@ static install_state gtkui_setup(install_info *info)
 
     return iterate_for_state();
 }
+#endif
 
 static int gtkui_update(install_info *info, const char *path, size_t progress, size_t size, const char *current)
 {

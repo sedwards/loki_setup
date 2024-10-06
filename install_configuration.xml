@@ -1,0 +1,39 @@
+<install>
+    <!-- Root element containing installation options -->
+    
+    <!-- An option node, representing a feature or component to install -->
+    <option name="Install Documentation" size="100" path="/usr/doc">
+        <description>Installs the documentation for the product.</description>
+        <dependencies>
+            <dependency>libgtk3</dependency>
+        </dependencies>
+    </option>
+
+    <!-- An exclusive node, representing a set of mutually exclusive options -->
+    <exclusive name="Choose Database Backend">
+        <option name="MySQL Backend" size="500" path="/usr/db/mysql">
+            <description>Installs MySQL as the database backend.</description>
+            <dependencies>
+                <dependency>mysql-server</dependency>
+            </dependencies>
+        </option>
+        <option name="PostgreSQL Backend" size="600" path="/usr/db/pgsql">
+            <description>Installs PostgreSQL as the database backend.</description>
+            <dependencies>
+                <dependency>postgresql-server</dependency>
+            </dependencies>
+        </option>
+    </exclusive>
+
+    <!-- A component node, grouping several options under one logical component -->
+    <component name="Web Server" showname="1">
+        <option name="Apache Web Server" size="200" path="/usr/web/apache">
+            <description>Installs Apache HTTP Server.</description>
+        </option>
+        <option name="Nginx Web Server" size="180" path="/usr/web/nginx">
+            <description>Installs Nginx Web Server.</description>
+        </option>
+    </component>
+
+</install>
+
