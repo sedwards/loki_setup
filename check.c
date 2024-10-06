@@ -209,21 +209,21 @@ static void add_message(GtkWidget *list, const char *str, ...)
 
 void on_cdrom_radio_toggled(GtkWidget *widget, gpointer user_data)
 {
-	gtk_widget_set_sensitive(glade_xml_get_widget(rescue_glade, "dir_entry"), FALSE);
-	gtk_widget_set_sensitive(glade_xml_get_widget(rescue_glade, "pick_dir_but"), FALSE);
+	gtk_widget_set_sensitive(gtk_builder_get_object(rescue_glade, "dir_entry"), FALSE);
+	gtk_widget_set_sensitive(gtk_builder_get_object(rescue_glade, "pick_dir_but"), FALSE);
 }
 
 void on_dir_radio_toggled(GtkWidget *widget, gpointer user_data)
 {
-	gtk_widget_set_sensitive(glade_xml_get_widget(rescue_glade, "dir_entry"), TRUE);
-	gtk_widget_set_sensitive(glade_xml_get_widget(rescue_glade, "pick_dir_but"), TRUE);
+	gtk_widget_set_sensitive(gtk_builder_get_object(rescue_glade, "dir_entry"), TRUE);
+	gtk_widget_set_sensitive(gtk_builder_get_object(rescue_glade, "pick_dir_but"), TRUE);
 }
 
 void
 on_media_cancel_clicked (GtkButton       *button,
 						 gpointer         user_data)
 {
-	gtk_widget_hide(glade_xml_get_widget(rescue_glade, "media_select"));
+	gtk_widget_hide(gtk_builder_get_object(rescue_glade, "media_select"));
 }
 
 int check_xml_setup(const char *file, const char *product)
@@ -244,21 +244,21 @@ void
 on_media_ok_clicked (GtkButton       *button,
 					 gpointer         user_data)
 {
-	GtkWidget *diag = glade_xml_get_widget(check_glade, "diagnostic_label"), *radio;
-        //GtkWidget *diag = GTK_WIDGET(gtk_builder_get_object(check_glade, "diagnostic_label"), *radio);
+	GtkWidget *diag = gtk_builder_get_object(check_glade, "diagnostic_label"), *radio;
+
 	char path[PATH_MAX], root[PATH_MAX];
 	install_info *install;
 	
-	radio = glade_xml_get_widget(rescue_glade, "dir_radio");
+	radio = gtk_builder_get_object(rescue_glade, "dir_radio");
 	if ( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radio)) ) {
 		/* Directory */
-		const gchar *str = gtk_entry_get_text(GTK_ENTRY(glade_xml_get_widget(rescue_glade, "dir_entry")));
+		const gchar *str = gtk_entry_get_text(GTK_ENTRY(gtk_builder_get_object(rescue_glade, "dir_entry")));
 		/* We ignore the CDROM prefix in that case */
 		snprintf(path, sizeof(path), "%s/setup.data/setup.xml", str);
 		if ( access( path, R_OK) ) {
 			/* Doesn't look like a setup archive */
 			gtk_label_set_text(GTK_LABEL(diag), _("Unable to identify an installation media."));
-			gtk_widget_hide(glade_xml_get_widget(rescue_glade, "media_select"));
+			gtk_widget_hide(gtk_builder_get_object(rescue_glade, "media_select"));
 			return;
 		}
 		strncpy(root, str, sizeof(root));
@@ -280,7 +280,7 @@ on_media_ok_clicked (GtkButton       *button,
 	/* Verify that the package is the same (product name and version) */
 	if ( ! check_xml_setup(path, info->name) ) {
 		gtk_label_set_text(GTK_LABEL(diag), _("Installation media doesn't match the product."));
-		gtk_widget_hide(glade_xml_get_widget(rescue_glade, "media_select"));
+		gtk_widget_hide(gtk_builder_get_object(rescue_glade, "media_select"));
 		return;		
 	}
 
@@ -329,8 +329,8 @@ on_media_ok_clicked (GtkButton       *button,
 
 	/* Print end message and disable the "Rescue" button */
 	gtk_label_set_text(GTK_LABEL(diag), _("Files successfully restored !"));
-	gtk_widget_set_sensitive(glade_xml_get_widget(check_glade, "rescue_button"), FALSE);
-	gtk_widget_hide(glade_xml_get_widget(rescue_glade, "media_select"));
+	gtk_widget_set_sensitive(gtk_builder_get_object(check_glade, "rescue_button"), FALSE);
+	gtk_widget_hide(gtk_builder_get_object(rescue_glade, "media_select"));
 
 	message_dialog(_("Files successfully restored !"), _("Success"));
 
@@ -344,7 +344,7 @@ void store_filename(GtkButton *but, GtkWidget *entry)
 	struct stat st;
 
 	if ( stat(str, &st)==0 && S_ISDIR(st.st_mode) ) {
-		gtk_entry_set_text(GTK_ENTRY(glade_xml_get_widget(rescue_glade, "dir_entry")), str);
+		gtk_entry_set_text(GTK_ENTRY(gtk_builder_get_object(rescue_glade, "dir_entry")), str);
 	} else {
 	    char buf[PATH_MAX];
 		/* Warn that there is no such directory ? */
@@ -399,7 +399,7 @@ on_rescue_button_clicked            (GtkButton       *button,
     glade_xml_signal_autoconnect(rescue_glade);
 
 	/* Ask the user to insert the media */
-    window = glade_xml_get_widget(rescue_glade, "media_select");
+    window = gtk_builder_get_object(rescue_glade, "media_select");
 	on_cdrom_radio_toggled(NULL, NULL);
 
 	gtk_widget_show(window);
@@ -447,23 +447,20 @@ int main(int argc, char *argv[])
 	argv0 = argv[0];
 
     /* Initialize Glade */
-    glade_init();
     check_glade = GLADE_XML_NEW(CHECK_GLADE, "check_dialog"); 
 
     /* Add all signal handlers defined in glade file */
-    glade_xml_signal_autoconnect(check_glade);
-
-    window = glade_xml_get_widget(check_glade, "check_dialog");
+    window = gtk_builder_get_object(check_glade, "check_dialog");
     gtk_widget_realize(window);
     while( gtk_events_pending() ) {
         gtk_main_iteration();
     }
 
-	diag = glade_xml_get_widget(check_glade, "diagnostic_label");
-	ok_but = glade_xml_get_widget(check_glade, "dismiss_button");
-	fix_but = glade_xml_get_widget(check_glade, "rescue_button");
-	list = glade_xml_get_widget(check_glade, "main_list");
-	scroll = glade_xml_get_widget(check_glade, "scrolledwindow");
+	diag = gtk_builder_get_object(check_glade, "diagnostic_label");
+	ok_but = gtk_builder_get_object(check_glade, "dismiss_button");
+	fix_but = gtk_builder_get_object(check_glade, "rescue_button");
+	list = gtk_builder_get_object(check_glade, "main_list");
+	scroll = gtk_builder_get_object(check_glade, "scrolledwindow");
 
 	product = loki_openproduct(argv[1]);
 	if ( ! product ) {

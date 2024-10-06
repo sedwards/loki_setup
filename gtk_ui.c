@@ -24,7 +24,7 @@
 	       Added code to gtkui_complete to clean up the GladeXML objects.
 
   04/21/2000:  Cleaned up a bit too much, too soon in gtkui_complete. 
-               Removed the gtk_object_unref for setup_glade because it's 
+               Removed the gtk_object_unref for setup_interface because it's 
 	       still in use by the Play Now button if uid is root...
 
   04/28/2000:  More cleanup problems. Can't unref the gtk objects in 
@@ -143,9 +143,9 @@ typedef enum
     CDKEY_PAGE
 } InstallPages;
 
-static GtkBuilder *setup_glade = NULL;
-static GtkBuilder *setup_glade_readme = NULL;
-static GtkBuilder *setup_glade_license = NULL;
+static GtkBuilder *setup_interface = NULL;
+static GtkBuilder *setup_interface_readme = NULL;
+static GtkBuilder *setup_interface_license = NULL;
 static int cur_state;
 static install_info *cur_info;
 static int diskspace;
@@ -204,9 +204,30 @@ gint path_entry_keypress_slot(GtkWidget *widget, GdkEvent *event,
     return FALSE;
 }
 
-/******** GtkWidget porting Helper Function ************/
+/******** Combined GtkWidget porting Helper Function ************/
+static GtkWidget *get_widget_with_builder(GtkBuilder *builder, const char *widget_name) {
+    GtkWidget *widget = GTK_WIDGET(gtk_builder_get_object(builder, widget_name));
+
+    if (!widget) {
+        g_print("Failed to load widget: %s\n", widget_name);
+    } else {
+        g_print("Successfully loaded widget: %s\n", widget_name);
+    }
+
+    return widget;
+}
+
+/******** Helper functions to use specific builders ************/
 static GtkWidget *get_widget(const char *widget_name) {
-    return GTK_WIDGET(gtk_builder_get_object(setup_glade, widget_name));
+    return get_widget_with_builder(setup_interface, widget_name);
+}
+
+static GtkWidget *get_widget_license(const char *widget_name) {
+    return get_widget_with_builder(setup_interface_license, widget_name);
+}
+
+static GtkWidget *get_widget_readme(const char *widget_name) {
+    return get_widget_with_builder(setup_interface_readme, widget_name);
 }
 
 gint binary_path_combo_change_slot(GtkWidget *widget, GdkEvent *event, gpointer data)
@@ -215,7 +236,7 @@ gint binary_path_combo_change_slot(GtkWidget *widget, GdkEvent *event, gpointer 
     GtkWidget *binary_entry;
 
     // Use GtkBuilder to retrieve the "binary_entry" widget
-    binary_entry = get_widget( "binary_entry" );
+    binary_entry = get_widget_with_builder(setup_interface, "binary_entry" );
 
     string = gtk_entry_get_text(GTK_ENTRY(binary_entry));
     if (string) {
@@ -239,8 +260,7 @@ gint path_combo_change_slot(GtkWidget *widget, GdkEvent *event, gpointer data)
     const char *string;
     GtkWidget *install_entry;
 
-    // Use GtkBuilder to retrieve the "install_entry" widget
-    install_entry = get_widget( "install_entry" );
+    install_entry = get_widget_with_builder(setup_interface, "install_entry" );
 
     string = gtk_entry_get_text(GTK_ENTRY(install_entry));
     if (string) {
@@ -380,7 +400,7 @@ static gboolean load_file_gtk3(GtkTextView *widget, const char *file)
 }
 
 void on_class_continue_clicked(GtkWidget *w, gpointer data)
-{              
+{
     GtkWidget *widget = get_widget( "recommended_but" );
 
     // Check if the current state is SETUP_CLASS
@@ -426,16 +446,16 @@ void setup_destroy_view_readme_slot(GtkWidget* w, gpointer data)
 {
     GtkWidget *widget;
 
-    if (setup_glade_readme) {
+    if (setup_interface_readme) {
         // Hide the readme dialog
-        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade_readme, "readme_dialog"));
+        widget = GTK_WIDGET(gtk_builder_get_object(setup_interface_readme, "readme_dialog"));
         if (widget) {
             gtk_widget_hide(widget);
         }
 
         // Free the builder and reset the pointer
-        g_object_unref(setup_glade_readme);
-        setup_glade_readme = NULL;
+        g_object_unref(setup_interface_readme);
+        setup_interface_readme = NULL;
 
         /*
          * Re-enable the 'view readme' buttons (all 3 of them)
@@ -461,13 +481,18 @@ void setup_button_view_readme_slot(GtkWidget *w, gpointer data)
     const char *file;
 
     // Load the UI using GtkBuilder
-    setup_glade_readme = gtk_builder_new();
-    gtk_builder_add_from_file(setup_glade_readme, glade_file, NULL);
-    gtk_builder_connect_signals(setup_glade_readme, NULL);
+    setup_interface_readme = gtk_builder_new();
+
+    if (!gtk_builder_add_from_file(setup_interface_readme, "loki_interface.gtk3.ui", NULL)) {
+      g_print("Failed to load UI file\n");
+    }
+
+    gtk_builder_add_from_file(setup_interface_readme, glade_file, NULL);
+    gtk_builder_connect_signals(setup_interface_readme, NULL);
 
     // Get widgets from GtkBuilder
-    readme = GTK_WIDGET(gtk_builder_get_object(setup_glade_readme, "readme_dialog"));
-    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade_readme, "readme_area"));
+    readme = get_widget_readme( "readme_dialog");
+    widget = get_widget_readme( "readme_area");
 
     file = GetProductREADME(cur_info, NULL);
     if (file && readme && widget) {
@@ -496,34 +521,38 @@ void setup_button_license_agree_slot(GtkWidget *widget, gpointer func_data)
     GtkWidget *license;
 
     // Get the license dialog from GtkBuilder
-    license = GTK_WIDGET(gtk_builder_get_object(setup_glade_license, "license_dialog"));
+    license = get_widget_license( "license_dialog" );
+
     if (license) {
         // Hide the license dialog
         gtk_widget_hide(license);
     }
+
     license_okay = 1;
+
     check_install_button();
+
     cur_state = SETUP_README;
 }
 
 void setup_destroy_license_slot(GtkWidget *w, gpointer data)
 {       
     /* !!! FIXME: this gets called more than once if LANG is set...not sure
-     * !!! FIXME:  why, but we explicitly set setup_glade_license to NULL
+     * !!! FIXME:  why, but we explicitly set setup_interface_license to NULL
      * !!! FIXME:  here so we don't touch an unref'd var.
      */
-    if (setup_glade_license) {
+    if (setup_interface_license) {
         GtkWidget *widget;
         
         // Use the get_widget wrapper to retrieve the license dialog widget
-        widget = get_widget("license_dialog");
+        widget = get_widget( "license_dialog");
         gtk_widget_hide(widget);
 
         cur_state = SETUP_EXIT;
 
         // Unreference the builder and set it to NULL
-        g_object_unref(setup_glade_license);
-        setup_glade_license = NULL;
+        g_object_unref(setup_interface_license);
+        setup_interface_license = NULL;
     }
 }
 
@@ -566,9 +595,9 @@ void setup_button_play_slot( GtkWidget* _widget, gpointer func_data )
 			  "root's home directory instead of your user account directory.");
 
         warning_dialog = WARNING_ROOT;
-        widget = get_widget("setup_notebook");
+        widget = get_widget( "setup_notebook");
         gtk_notebook_set_current_page(GTK_NOTEBOOK(widget), WARNING_PAGE);
-        widget = get_widget("warning_label");
+        widget = get_widget( "warning_label");
         gtk_label_set_text(GTK_LABEL(widget), warning_text);
     } else
 #endif
@@ -613,7 +642,7 @@ void setup_cdkey_entry_changed_slot(GtkEntry *entry, gpointer user_data)
 {
     const gchar *CDKey = gtk_entry_get_text( GTK_ENTRY(entry) );
     GtkWidget *button;
-    button = get_widget("setup_button_cdkey_continue");
+    button = get_widget( "setup_button_cdkey_continue");
 
     gtk_widget_set_sensitive(button, (*CDKey) ? TRUE : FALSE);
 }
@@ -623,7 +652,7 @@ void setup_button_cdkey_continue_slot( GtkWidget* widget, gpointer func_data )
     /* HACK: Use external cd key validation program, if it exists. --ryan. */
     #define CDKEYCHECK_PROGRAM "./vcdk"
     char cmd[sizeof (gCDKeyString) + sizeof (CDKEYCHECK_PROGRAM) + 64];
-    GtkWidget *entry = get_widget("setup_cdkey_entry");
+    GtkWidget *entry = get_widget( "setup_cdkey_entry");
     char *CDKey = (char *) gtk_entry_get_text( GTK_ENTRY(entry) );
     char *p;
 
@@ -661,7 +690,7 @@ void setup_button_install_slot( GtkWidget* widget, gpointer func_data )
 	const char* message;
 	char* explanation = NULL;
     GtkWidget *notebook;
-    notebook = get_widget("setup_notebook");
+    notebook = get_widget( "setup_notebook");
 
 	message = check_for_installation(cur_info, &explanation);
 
@@ -682,8 +711,8 @@ void setup_button_install_slot( GtkWidget* widget, gpointer func_data )
     /* If CDKEY attribute was specified, show the CDKEY screen */
     if(GetProductCDKey(cur_info))
     {
-        GtkWidget *button = get_widget("setup_button_cdkey_continue");
-        GtkWidget *entry = get_widget("setup_cdkey_entry");
+        GtkWidget *button = get_widget( "setup_button_cdkey_continue");
+        GtkWidget *entry = get_widget( "setup_cdkey_entry");
 
 		gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), CDKEY_PAGE);
         gtk_entry_set_text(GTK_ENTRY(entry), "");
@@ -726,8 +755,8 @@ static void check_install_button(void)
     message = check_for_installation(cur_info, NULL);
 
     /* Get the appropriate widgets and set the new state */
-    options_status = get_widget("options_status");
-    install_widget = get_widget("button_install");
+    options_status = get_widget( "options_status");
+    install_widget = get_widget( "button_install");
 
     if ( !message ) {
         message = _("Ready to install!");
@@ -836,8 +865,8 @@ void on_use_binary_toggled ( GtkWidget* widget, gpointer func_data)
     /*-------------------------------------------------------------------------
     ** Pick up widget handles
     **-----------------------------------------------------------------------*/
-    binary_path_widget = get_widget("binary_path");
-    binary_label_widget = get_widget("binary_label");
+    binary_path_widget = get_widget( "binary_path");
+    binary_label_widget = get_widget( "binary_label");
 
     /*-------------------------------------------------------------------------
     ** Mark the appropriate widgets active or inactive
@@ -870,7 +899,7 @@ void setup_checkbox_option_slot( GtkWidget* widget, gpointer func_data)
 	if(!data_node)
 		return;
 	
-	window = get_widget("setup_window");
+	window = get_widget( "setup_window");
 
 	//if ( GTK_TOGGLE_BUTTON(widget)->active ) {
         if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget))) {
@@ -893,24 +922,19 @@ void setup_checkbox_option_slot( GtkWidget* widget, gpointer func_data)
 					GtkWidget *license_widget;
 
 
-if (!setup_glade_license) {
-    setup_glade_license = gtk_builder_new();
-    gtk_builder_add_from_file(setup_glade_license, glade_file, NULL);
+if (!setup_interface_license) {
+    setup_interface_license = gtk_builder_new();
+    gtk_builder_add_from_file(setup_interface_license, glade_file, NULL);
 }
 
 // Automatically connect signals defined in the UI file
-gtk_builder_connect_signals(setup_glade_license, NULL);
+gtk_builder_connect_signals(setup_interface_license, NULL);
 
 // Retrieve the license dialog and license area widgets
-license = GTK_WIDGET(gtk_builder_get_object(setup_glade_license, "license_dialog"));
-license_widget = GTK_WIDGET(gtk_builder_get_object(setup_glade_license, "license_area"));
-
-
+license = get_widget_license( "license_dialog" );
+license_widget = get_widget_license( "license_area" );
 					if ( license && license_widget ) {
 						install_state start;
-#if ! defined(ENABLE_GTK2)
-						GdkFont *font;
-#endif
 						
 						gtk_widget_hide(license);
 						load_file_gtk3(GTK_TEXT_VIEW(license_widget), name);
@@ -1621,7 +1645,7 @@ static void parse_option(install_info *info, const char *component, xmlNodePtr n
 		g_object_set_data((button), "data", (gpointer)node);
 
 		/* Register the button in the window's private data */
-		window = get_widget("setup_window");
+		window = get_widget( "setup_window");
 		g_object_set_data((window), name, (gpointer)button);
 	}
 
@@ -1715,9 +1739,9 @@ static void update_image(const char *image_file, gboolean left)
 	image_path[sizeof(image_path)-1] = '\0';
 
 	if(left)
-		frame = get_widget("image_frame");
+		frame = get_widget( "image_frame");
 	else
-		frame = get_widget("image_frame_top");
+		frame = get_widget( "image_frame_top");
 
 	g_return_if_fail(frame != NULL);
 
@@ -1823,9 +1847,13 @@ static install_state gtkui_init(install_info *info, int argc, char **argv, int n
     }
     fclose(opened);
 
-// Use GtkBuilder instead of GladeXML to load the UI
-setup_glade = gtk_builder_new();
-gtk_builder_add_from_file(setup_glade, glade_file, NULL);
+    // Use GtkBuilder instead of GladeXML to load the UI
+    setup_interface = gtk_builder_new();
+      if (!gtk_builder_add_from_file(setup_interface, "loki_interface.gtk3.ui", NULL)) {
+      g_print("Failed to load UI file\n");
+    }
+
+gtk_builder_add_from_file(setup_interface, glade_file, NULL);
 
 // Retrieve the install_path and set up the combo box
 install_path = get_widget( "install_path" );
@@ -1844,7 +1872,7 @@ g_signal_connect_after(binary_path, "changed", G_CALLBACK(binary_path_combo_chan
 g_signal_connect_after(binary_entry, "key_press_event", G_CALLBACK(binary_path_entry_keypress_slot), NULL);
 
 // Auto-connect other signal handlers defined in the UI file
-gtk_builder_connect_signals(setup_glade, NULL);
+gtk_builder_connect_signals(setup_interface, NULL);
 
 
 #if 0 /* Sam 8/22 - I don't think this is necessary */
@@ -1853,7 +1881,7 @@ gtk_builder_connect_signals(setup_glade, NULL);
     ** Connect a signal handle to control whether or not the symlink
     **  should be installed
     **------------------------------------------------------------------------*/
-    symlink_checkbox = get_widget("symlink_checkbox");
+    symlink_checkbox = get_widget( "symlink_checkbox");
     gtk_signal_connect(GTK_OBJECT(symlink_checkbox), "toggled",
 			   GTK_SIGNAL_FUNC(on_use_binary_toggled), NULL);
 #endif /*0*/
@@ -1948,25 +1976,25 @@ if (GetProductIsMeta(info)) {
 
     /* Disable the path fields if they were provided via command line args */
     if (disable_install_path) {
-        widget = get_widget("install_path");
+        widget = get_widget( "install_path");
 		gtk_widget_set_sensitive(widget, FALSE);
     }
     if (disable_binary_path) {
-        widget = get_widget("binary_path");
+        widget = get_widget( "binary_path");
 		gtk_widget_set_sensitive(widget, FALSE);
     }
 	if (GetProductHasNoBinaries(info)) {
-        widget = get_widget("binary_path");
+        widget = get_widget( "binary_path");
 		if(widget) gtk_widget_hide(widget);
-		widget = get_widget("binary_label");
+		widget = get_widget( "binary_label");
 		if(widget) gtk_widget_hide(widget);
-		widget = get_widget("setup_menuitems_checkbox");
+		widget = get_widget( "setup_menuitems_checkbox");
 		if(widget) gtk_widget_hide(widget);
 	}
 	if ( !GetProductHasManPages(info) ) {
-        widget = get_widget("manpage_combo");
+        widget = get_widget( "manpage_combo");
 		if(widget) gtk_widget_hide(widget);
-        widget = get_widget("manpage_label");
+        widget = get_widget( "manpage_label");
 		if(widget) gtk_widget_hide(widget);
 	}
 	/*--------------------------------------------------------------------
@@ -1975,7 +2003,7 @@ if (GetProductIsMeta(info)) {
 	**      haven't asked for that feature.
 	**------------------------------------------------------------------*/
 	if (GetProductHasNoBinaries(info) || (!GetProductHasPromptBinaries(info))) {
-		widget = get_widget("symlink_checkbox");
+		widget = get_widget( "symlink_checkbox");
 		if (widget)	gtk_widget_hide(widget);
 	}
 
@@ -1985,7 +2013,7 @@ if (GetProductIsMeta(info)) {
     
 	/* Check if we should check "Expert" installation by default */
 	if ( check_for_installation(info, NULL) ) {
-		widget = get_widget("expert_but");
+		widget = get_widget( "expert_but");
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
 	}
     
@@ -2016,13 +2044,13 @@ static install_state gtkui_license(install_info *info)
     PangoFontDescription *font_desc;
 
     // Use GtkBuilder instead of GladeXML
-    setup_glade_license = gtk_builder_new();
-    gtk_builder_add_from_file(setup_glade_license, glade_file, NULL);
-    gtk_builder_connect_signals(setup_glade_license, NULL);
+    setup_interface_license = gtk_builder_new();
+    gtk_builder_add_from_file(setup_interface_license, "loki_interface.gtk3.ui", NULL);
+    gtk_builder_connect_signals(setup_interface_license, NULL);
 
     // Retrieve widgets
-    license = GTK_WIDGET(gtk_builder_get_object(setup_glade_license, "license_dialog"));
-    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade_license, "license_area"));
+    license = GTK_WIDGET(gtk_builder_get_object(setup_interface_license, "license_dialog"));
+    widget = GTK_WIDGET(gtk_builder_get_object(setup_interface_license, "license_area"));
 
     if (license && widget) {
         // Use PangoFontDescription instead of GdkFont
@@ -2060,10 +2088,10 @@ static install_state gtkui_readme(install_info *info)
 static install_state gtkui_pick_class(install_info *info)
 {
 	/* Enable the Continue button now */
-	GtkWidget *widget = get_widget("class_continue");
+	GtkWidget *widget = get_widget( "class_continue");
 
 	/* Make sure the window is being shown */
-    gtk_widget_show(get_widget("setup_window"));
+    gtk_widget_show(get_widget( "setup_window"));
 
 	gtk_widget_set_sensitive(widget, TRUE);
 	return iterate_for_state();
@@ -2117,7 +2145,7 @@ static install_state gtkui_setup(install_info *info)
     }
 
     // Go through the install options
-    options = get_widget("option_vbox");
+    options = get_widget( "option_vbox");
     gtk_container_foreach(GTK_CONTAINER(options), empty_container, options);
     info->install_size = 0;
     node = XML_CHILDREN(XML_ROOT(info->config));
@@ -2233,11 +2261,11 @@ static int gtkui_update(install_info *info, const char *path, size_t progress, s
         } else {
             last_update = new_update;
         }
-        widget = get_widget("current_option_label");
+        widget = get_widget( "current_option_label");
         if ( widget ) {
             gtk_label_set_text( GTK_LABEL(widget), current);
         }
-        widget = get_widget("current_file_label");
+        widget = get_widget( "current_file_label");
         if ( widget ) {
             text = path;
             /* Remove the install path from the string */
@@ -2251,7 +2279,7 @@ static int gtkui_update(install_info *info, const char *path, size_t progress, s
             }
             gtk_label_set_text( GTK_LABEL(widget), text);
         }
-        widget = get_widget("current_file_progress");
+        widget = get_widget( "current_file_progress");
 
 //        gtk_progress_bar_update(GTK_PROGRESS_BAR(widget), new_update);
           gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(widget), new_update );
@@ -2263,7 +2291,7 @@ static int gtkui_update(install_info *info, const char *path, size_t progress, s
 		} else if (new_update < 0.0) {
 			new_update = 0.0;
 		}
-        widget = get_widget("total_file_progress");
+        widget = get_widget( "total_file_progress");
 
 //        gtk_progress_bar_update(GTK_PROGRESS_BAR(widget), new_update);
           gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(widget), new_update );
@@ -2279,12 +2307,12 @@ static void gtkui_abort(install_info *info)
     GtkWidget *notebook, *w;
 
 	/* No point in waiting for a change of state if the window is not there */
-	w = get_widget("setup_window");
+	w = get_widget( "setup_window");
 	if ( !w || ! gtk_widget_get_visible(w) )
 		return;
 
-    if ( setup_glade ) {
-        notebook = get_widget("setup_notebook");
+    if ( setup_interface ) {
+        notebook = get_widget( "setup_notebook");
         gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), ABORT_PAGE);
         iterate_for_state();
 		gtk_widget_hide(w);
@@ -2301,17 +2329,17 @@ static install_state gtkui_website(install_info *info)
     const char *website_text;
     int do_launch;
 
-    notebook = get_widget("setup_notebook");
+    notebook = get_widget( "setup_notebook");
     gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), WEBSITE_PAGE);
 
     /* Add the proper product text */
-    widget = get_widget("website_product_label");
+    widget = get_widget( "website_product_label");
     gtk_label_set_text(GTK_LABEL(widget), GetProductDesc(info));
 
     /* Add special website text if desired */
     website_text = GetWebsiteText(info);
     if ( website_text ) {
-        widget = get_widget("website_text_label");
+        widget = get_widget( "website_text_label");
         gtk_label_set_text(GTK_LABEL(widget), website_text);
     }
 
@@ -2319,10 +2347,10 @@ static install_state gtkui_website(install_info *info)
     do_launch = 0;
     if ( strcmp(GetAutoLaunchURL(info), "true") == 0 ) {
         do_launch = 1;
-        hideme = get_widget("auto_url_no");
+        hideme = get_widget( "auto_url_no");
     } else {
         do_launch = 0;
-        hideme = get_widget("auto_url_yes");
+        hideme = get_widget( "auto_url_yes");
     }
     gtk_widget_hide(hideme);
 
@@ -2338,13 +2366,13 @@ static install_state gtkui_complete(install_info *info)
     GtkWidget *widget;
     char text[1024];
 
-    widget = get_widget("setup_notebook");
+    widget = get_widget( "setup_notebook");
     gtk_notebook_set_current_page(GTK_NOTEBOOK(widget), DONE_PAGE);
-    widget = get_widget("install_directory_label");
+    widget = get_widget( "install_directory_label");
     gtk_label_set_text(GTK_LABEL(widget), info->install_path);
 
     check_program_to_start(info);
-    widget = get_widget("play_game_label");
+    widget = get_widget( "play_game_label");
     if ( info->installed_symlink && info->symlinks_path && *info->symlinks_path ) {
         snprintf(text, sizeof(text), _("Type '%s' to start the program"), info->installed_symlink);
     }
@@ -2356,7 +2384,7 @@ static install_state gtkui_complete(install_info *info)
     gtk_label_set_text(GTK_LABEL(widget), text);
 
     /* Hide the play game button if there's no game to play. :) */
-    widget = get_widget("play_game_button");
+    widget = get_widget( "play_game_button");
     if ( widget && 
 		 (!info->installed_symlink || !info->symlinks_path || !*info->symlinks_path ) && ! *info->play_binary) {
         gtk_widget_hide(widget);
@@ -2364,12 +2392,12 @@ static install_state gtkui_complete(install_info *info)
 
     /* Hide the 'View Readme' button if we have no readme... */
     if ( ! GetProductREADME(info, NULL) ) {
-        widget = get_widget("view_readme_end_button");
+        widget = get_widget( "view_readme_end_button");
         if(widget)
             gtk_widget_hide(widget);
     }
 
-    widget = get_widget("setup_complete_label");
+    widget = get_widget( "setup_complete_label");
     if (info->options.reinstalling)
         strcpy(text, _("The update/reinstall was successfully completed!"));
     else
@@ -2385,22 +2413,22 @@ static install_state gtkui_complete(install_info *info)
 static void gtkui_shutdown(install_info *info)
 {
     /* Destroy all windows */
-    GtkWidget *window = get_widget("setup_window");
+    GtkWidget *window = get_widget( "setup_window");
 
     gtk_widget_hide(window);
-    if ( setup_glade_readme ) {
-		window = get_widget("readme_dialog");
+    if ( setup_interface_readme ) {
+		window = get_widget_readme( "readme_dialog" );
 		gtk_widget_hide(window);
     }
-    if ( setup_glade_license ) {
-		window = get_widget("license_dialog");
+    if ( setup_interface_license ) {
+		window = get_widget_license( "license_dialog");
 		gtk_widget_hide(window);
     }
-	/* This seems to work better on GTK2 */
+
+    /* This seems to work better on GTK2 */
     while( gtk_events_pending() == TRUE) {
         gtk_main_iteration();
     }
-	// gtkui_idle(info);
 }
 
 int gtkui_okay(Install_UI *UI, int *argc, char ***argv)
