@@ -118,7 +118,7 @@ int main(void)
     doc = xmlParseFile("setup.xml");
     if ( doc ) {
         printf("Description: %s\n", GetNodeText(doc, XML_ROOT(doc), "desc"));
-        cur = doc->root;
+        cur = xmlDocGetRootElement(doc);
         if ( cur ) {
             printf("Root node name: %s\n", cur->name);
             ParseNode(doc, cur, 0);
@@ -127,3 +127,4 @@ int main(void)
     xmlSaveFile("foo.xml", doc);
 	return 0;
 }
+

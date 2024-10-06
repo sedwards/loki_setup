@@ -44,7 +44,7 @@ static FILE *fterm = NULL;
 static pid_t pid = 0;
 
 static gint
-ec_su_failed (gpointer user_data)
+exec_su_failed (gpointer user_data)
 {
     printf("static gint exec_su_failed (gpointer user_data)\n");
     return FALSE;
@@ -238,7 +238,7 @@ void xsu_perform()
 
 		if (strncmp (buf, SU_PWD_OUT, SU_PWD_LEN) == 0)
 		{
-			gtk_timeout_remove (timeout);
+			g_source_remove(timeout);
 			break;
 		}
 
@@ -344,18 +344,20 @@ GtkWidget* create_gtk_pixmap_d(char *xpm[])
 
 GtkWidget* create_gtk_xsu_window (void)
 {
-
-  tooltips = gtk_tooltips_new ();
   gtk_xsu_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_widget_set_name (gtk_xsu_window, "gtk_xsu_window");
-  gtk_object_set_data (G_OBJECT (gtk_xsu_window), "gtk_xsu_window", gtk_xsu_window);
+  g_object_set_data (G_OBJECT (gtk_xsu_window), "gtk_xsu_window", gtk_xsu_window);
+
   if (title_in)
 	gtk_window_set_title (GTK_WINDOW (gtk_xsu_window), arg_title);
   else 
 	gtk_window_set_title (GTK_WINDOW (gtk_xsu_window), _("Login Prompt"));
 	
   gtk_window_set_position (GTK_WINDOW (gtk_xsu_window), GTK_WIN_POS_CENTER);
-  gtk_window_set_policy (GTK_WINDOW (gtk_xsu_window), FALSE, FALSE, FALSE);
+
+  //gtk_window_set_policy (GTK_WINDOW (gtk_xsu_window), FALSE, FALSE, FALSE);
+  gtk_window_set_resizable(GTK_WINDOW(gtk_xsu_window), FALSE);  // Make window non-resizable
+
   gtk_window_table = gtk_table_new (6, 2, FALSE);
   gtk_widget_set_name (gtk_window_table, "gtk_window_table");
   g_object_ref (gtk_window_table);
@@ -445,8 +447,8 @@ GtkWidget* create_gtk_xsu_window (void)
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_password_textbox, 1, 2, 3, 4,
                     (GtkAttachOptions) (GTK_EXPAND),
                     (GtkAttachOptions) (0), 0, 0);	    
-  gtk_widget_set_usize (gtk_password_textbox, 230, -2);
-  gtk_tooltips_set_tip (tooltips, gtk_password_textbox, _("Type the password here"), NULL);
+  gtk_widget_set_size_request(gtk_password_textbox, 230, -1);
+  gtk_widget_set_tooltip_markup ( gtk_password_textbox, _("Type the password here"));
   gtk_entry_set_visibility (GTK_ENTRY (gtk_password_textbox), FALSE);
 
   gtk_user_textbox = gtk_entry_new ();
@@ -461,8 +463,8 @@ GtkWidget* create_gtk_xsu_window (void)
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_user_textbox, 1, 2, 2, 3,
                     (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
-  gtk_widget_set_usize (gtk_user_textbox, 230, -2);
-  gtk_tooltips_set_tip (tooltips, gtk_user_textbox, _("Type the username here"), NULL);
+  gtk_widget_set_size_request( gtk_user_textbox, 230, -2);
+  gtk_widget_set_tooltip_markup ( gtk_user_textbox, _("Type the username here"));
 
   gtk_command_textbox = gtk_entry_new ();
   gtk_widget_set_name (gtk_command_textbox, "gtk_command_textbox");
@@ -475,8 +477,8 @@ GtkWidget* create_gtk_xsu_window (void)
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_command_textbox, 1, 2, 1, 2,
                     (GtkAttachOptions) (GTK_EXPAND),
                     (GtkAttachOptions) (0), 0, 0);
-  gtk_widget_set_usize (gtk_command_textbox, 230, -2);
-  gtk_tooltips_set_tip (tooltips, gtk_command_textbox, _("Type the command here"), NULL);
+  gtk_widget_set_size_request( gtk_command_textbox, 230, -2);
+  gtk_widget_set_tooltip_markup  ( gtk_command_textbox, _("Type the command here") );
 /* xsu 0.2.3 *
 	The buttons and their size in other languages have been fixed. This
 	bug was filed by Robert Millan <zeratul2@wanadoo.es>
@@ -547,7 +549,7 @@ GtkWidget* create_gtk_xsu_window (void)
   g_object_set_data_full(G_OBJECT(gtk_xsu_window), "gtk_separator_one", gtk_window_table, (GDestroyNotify) g_object_unref);
 
 
-  g_widget_show (gtk_separator_one);
+  gtk_widget_show (gtk_separator_one);
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_separator_one, 0, 2, 4, 5,
                     (GtkAttachOptions) (GTK_FILL),
                     (GtkAttachOptions) (GTK_FILL), 0, 8);
@@ -572,8 +574,6 @@ GtkWidget* create_gtk_xsu_window (void)
   g_signal_connect (G_OBJECT (gtk_ok_button), "clicked",
                       G_CALLBACK (on_gtk_ok_button_clicked),
                       NULL);
-
-  g_object_set_data (G_OBJECT (gtk_xsu_window), "tooltips", tooltips);
 
   return gtk_xsu_window;
 }
@@ -778,7 +778,9 @@ int main (int argc, char *argv[])
 	if (username_in) /* If there was a username argument */
 	{
 		gtk_entry_set_text(GTK_ENTRY(gtk_user_textbox),arg_username);
-		if (dis_textboxes) gtk_entry_set_editable(GTK_ENTRY(gtk_user_textbox), FALSE);
+		//if (dis_textboxes)
+                  // gtk_entry_set_editable(GTK_ENTRY(gtk_user_textbox), FALSE);
+
 		if (hide_textboxes) 
 		{
 			gtk_widget_hide(gtk_user_textbox);
@@ -790,7 +792,8 @@ int main (int argc, char *argv[])
 	if (command_in) /* If there was a command argument */
 	{
 		gtk_entry_set_text(GTK_ENTRY(gtk_command_textbox),arg_command);
-		if (dis_textboxes) gtk_entry_set_editable(GTK_ENTRY(gtk_command_textbox), FALSE);
+		//if (dis_textboxes)
+                  //  gtk_entry_set_editable(GTK_ENTRY(gtk_command_textbox), FALSE);
 		if (hide_textboxes) 
 		{ 
 			gtk_widget_hide(gtk_command_textbox);

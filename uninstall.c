@@ -18,11 +18,8 @@
 #include "install.h"
 #include "install_ui.h"
 #include "setupdb.h"
-#ifdef UNINSTALL_UICARBON
-#include "uninstall_uicarbon.h"
-#elif UNINSTALL_UI
+//#include "uninstall_uicarbon.h"
 #include "uninstall_ui.h"
-#endif
 #include "uninstall.h"
 
 #ifdef HAVE_GETOPT_H

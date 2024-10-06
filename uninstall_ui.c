@@ -8,7 +8,6 @@
 #define _(String) gettext (String)
 
 #include <gtk/gtk.h>
-#include <glade/glade.h>
 
 #include "config.h"
 #include "setupdb.h"
@@ -16,37 +15,39 @@
 #include "uninstall.h"
 #include "uninstall_ui.h"
 
-#if defined(ENABLE_GTK2)
-    #define UNINSTALL_GLADE "uninstall.gtk2.glade"
-#else
-    #define UNINSTALL_GLADE "uninstall.glade"
-#endif
+#define UNINSTALL_GLADE "uninstall.gtk3.ui"
 
-static GladeXML *uninstall_glade;
+static GtkBuilder *uninstall_builder = NULL;
+
 static int uninstall_cancelled = 0;
 
-/* GTk utility function */
+/* GTK utility function */
 void gtk_button_set_sensitive(GtkWidget *button, gboolean sensitive)
 {
+    // Set widget sensitivity
     gtk_widget_set_sensitive(button, sensitive);
 
-    /* Simulate a mouse crossing event, to enable button */
-    if ( sensitive ) {
+    // Simulate a mouse crossing event if button becomes sensitive
+    if (sensitive) {
         int x, y;
         gboolean retval;
         GdkEventCrossing crossing;
+        GtkAllocation allocation;
 
-        gtk_widget_get_pointer(button, &x, &y);
-        if ( (x >= 0) && (y >= 0) &&
-             (x <= button->allocation.width) &&
-             (y <= button->allocation.height) ) {
-                memset(&crossing, 0, sizeof(crossing));
-                crossing.type = GDK_ENTER_NOTIFY;
-                crossing.window = button->window;
-                crossing.detail = GDK_NOTIFY_VIRTUAL;
-                gtk_signal_emit_by_name(G_OBJECT(button),
-                                        "enter_notify_event",
-                                        &crossing, &retval);
+        // Get pointer position relative to the widget and its allocation
+        gtk_widget_get_allocation(button, &allocation);
+        gdk_window_get_device_position(gtk_widget_get_window(button), NULL, &x, &y, NULL);
+
+        // Check if the pointer is inside the widget area
+        if (x >= 0 && y >= 0 && x <= allocation.width && y <= allocation.height) {
+            memset(&crossing, 0, sizeof(crossing));
+            crossing.type = GDK_ENTER_NOTIFY;
+            crossing.window = gtk_widget_get_window(button);
+            crossing.detail = GDK_NOTIFY_VIRTUAL;
+            crossing.mode = GDK_CROSSING_NORMAL;
+
+            // Emit the enter_notify_event signal
+            g_signal_emit_by_name(button, "enter_notify_event", &crossing, &retval);
         }
     }
 }
@@ -77,27 +78,26 @@ static int display_message(const char *txt, int buttons)
     label = gtk_label_new (txt);
 	if ( buttons & BUTTON_OK ) {
 		ok_button = gtk_button_new_with_label(_("OK"));
-		gtk_signal_connect_object (G_OBJECT (ok_button), "clicked",
-								   G_CALLBACK (prompt_okbutton_slot), G_OBJECT(dialog));
-		gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->action_area),
-						   ok_button);
+		gtk_signal_connect_object (G_OBJECT (ok_button), "clicked", G_CALLBACK (prompt_okbutton_slot), G_OBJECT(dialog));
+                GtkWidget *action_area = gtk_dialog_get_action_area(GTK_DIALOG(dialog));
+                gtk_container_add(GTK_CONTAINER(action_area), ok_button);
 	}
 	if ( buttons & BUTTON_ABORT ) {
 		abort_button = gtk_button_new_with_label(_("Abort"));
-		gtk_signal_connect_object (G_OBJECT (abort_button), "clicked",
-								   G_CALLBACK (prompt_nobutton_slot), G_OBJECT(dialog));
-		gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->action_area),
-						   abort_button);
+		gtk_signal_connect_object (G_OBJECT (abort_button), "clicked",G_CALLBACK (prompt_nobutton_slot), G_OBJECT(dialog));
+                GtkWidget *action_area = gtk_dialog_get_action_area(GTK_DIALOG(dialog));
+                gtk_container_add(GTK_CONTAINER(action_area), dialog);
 	}
+
     /* Ensure that the dialog box is destroyed when the user clicks ok. */
     
 	gtk_signal_connect_object(G_OBJECT(dialog), "delete-event",
 							  G_CALLBACK(prompt_nobutton_slot), G_OBJECT(dialog));
     
     /* Add the label, and show everything we've added to the dialog. */
-    
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox),
-                       label);
+    GtkWidget *content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    gtk_container_add(GTK_CONTAINER(content_area), label);
+
     gtk_window_set_title(GTK_WINDOW(dialog), _("Message"));
     gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
     gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
@@ -212,17 +212,21 @@ static size_t calculate_recovered_space(void)
 
     ready = FALSE;
     size = 0;
-    widget = glade_xml_get_widget(uninstall_glade, "uninstall_vbox");
-    list = gtk_container_children(GTK_CONTAINER(widget));
-    while ( list ) {
+
+    // Retrieve uninstall_vbox using GtkBuilder
+    widget = GTK_WIDGET(gtk_builder_get_object(uninstall_builder, "uninstall_vbox"));
+    list = gtk_container_get_children(GTK_CONTAINER(widget));
+    
+    while (list) {
         widget = GTK_WIDGET(list->data);
-        poopy = gtk_container_children(GTK_CONTAINER(widget));
+        poopy = gtk_container_get_children(GTK_CONTAINER(widget));
         widget = GTK_WIDGET(poopy->data);
-        clist = gtk_container_children(GTK_CONTAINER(widget));
-        while ( clist ) {
+        clist = gtk_container_get_children(GTK_CONTAINER(widget));
+        
+        while (clist) {
             button = GTK_WIDGET(clist->data);
-            if ( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)) ) {
-                component = gtk_object_get_data(G_OBJECT(button), "data");
+            if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) {
+                component = g_object_get_data(G_OBJECT(button), "data");
                 size += component->size / 1024;
                 ready = TRUE;
             }
@@ -230,17 +234,22 @@ static size_t calculate_recovered_space(void)
         }
         list = list->next;
     }
-    widget = glade_xml_get_widget(uninstall_glade, "recovered_space_label");
-    if ( widget ) {
+
+    // Update the recovered_space_label
+    widget = GTK_WIDGET(gtk_builder_get_object(uninstall_builder, "recovered_space_label"));
+    if (widget) {
         char text[128];
-        sprintf(text, _("%d MB"), size/1024);
+        sprintf(text, _("%zu MB"), size / 1024);  // %zu for size_t
         gtk_label_set_text(GTK_LABEL(widget), text);
     }
-    widget = glade_xml_get_widget(uninstall_glade, "uninstall_button");
-    if ( widget ) {
-        gtk_button_set_sensitive(widget, ready);
+
+    // Update the uninstall_button
+    widget = GTK_WIDGET(gtk_builder_get_object(uninstall_builder, "uninstall_button"));
+    if (widget) {
+        gtk_widget_set_sensitive(widget, ready);
     }
-    return(size);
+
+    return size;
 }
 
 void main_quit_slot(GtkWidget* w, gpointer data)
@@ -263,8 +272,9 @@ static void set_status_text(const char *text)
 {
     GtkWidget *widget;
 
-    widget = glade_xml_get_widget(uninstall_glade, "uninstall_status_label");
-    if ( widget ) {
+    // Retrieve the label for status update
+    widget = GTK_WIDGET(gtk_builder_get_object(uninstall_builder, "uninstall_status_label"));
+    if (widget) {
         gtk_label_set_text(GTK_LABEL(widget), text);
     }
 }
@@ -279,48 +289,52 @@ void perform_uninstall_slot(GtkWidget* w, gpointer data)
     component_list *component;
     size_t size, total;
     char text[1024];
-	const char *message;
+    const char *message;
 
-	/* Set through environment to hide questions, and assume Yes */
-	int show_messages;
-	const char *env;
+    /* Set through environment to hide questions, and assume Yes */
+    int show_messages;
+    const char *env;
 
-	show_messages = 1;
+    show_messages = 1;
 
-	env = getenv("SETUP_NO_PROMPT");
-	if ( env && atoi(env) )
-		show_messages = 0;
-
+    env = getenv("SETUP_NO_PROMPT");
+    if (env && atoi(env))
+        show_messages = 0;
 
     /* First switch to the next notebook page */
-    notebook = glade_xml_get_widget(uninstall_glade, "uninstall_notebook");
-    gtk_notebook_set_page(GTK_NOTEBOOK(notebook), 1);
-    widget = glade_xml_get_widget(uninstall_glade, "finished_button");
-    if ( widget ) {
-        gtk_button_set_sensitive(widget, FALSE);
+    notebook = GTK_WIDGET(gtk_builder_get_object(uninstall_builder, "uninstall_notebook"));
+    gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), 1);
+
+    widget = GTK_WIDGET(gtk_builder_get_object(uninstall_builder, "finished_button"));
+    if (widget) {
+        gtk_widget_set_sensitive(widget, FALSE);
     }
 
     /* Now uninstall all the selected components */
-    progress = glade_xml_get_widget(uninstall_glade, "uninstall_progress");
+    progress = GTK_WIDGET(gtk_builder_get_object(uninstall_builder, "uninstall_progress"));
     size = 0;
     total = calculate_recovered_space();
-    widget = glade_xml_get_widget(uninstall_glade, "uninstall_vbox");
-    list = gtk_container_children(GTK_CONTAINER(widget));
-    while ( list && ! uninstall_cancelled ) {
+
+    widget = GTK_WIDGET(gtk_builder_get_object(uninstall_builder, "uninstall_vbox"));
+    list = gtk_container_get_children(GTK_CONTAINER(widget));
+
+    while (list && !uninstall_cancelled) {
         widget = GTK_WIDGET(list->data);
-        poopy = gtk_container_children(GTK_CONTAINER(widget));
+        poopy = gtk_container_get_children(GTK_CONTAINER(widget));
         widget = GTK_WIDGET(poopy->data);
+        
         /* First do the addon components */
-        clist = gtk_container_children(GTK_CONTAINER(widget));
-        while ( clist && ! uninstall_cancelled ) {
+        clist = gtk_container_get_children(GTK_CONTAINER(widget));
+        while (clist && !uninstall_cancelled) {
             button = GTK_WIDGET(clist->data);
-            if ( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)) ) {
-                component = gtk_object_get_data(G_OBJECT(button), "data");
-                if ( loki_isdefault_component(component->component) ) {
+            if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) {
+                component = g_object_get_data(G_OBJECT(button), "data");
+                if (loki_isdefault_component(component->component)) {
                     clist = clist->next;
                     continue;
                 }
-                /* Put up the status */
+
+               /* Put up the status */
                 snprintf(text, sizeof(text), "%s: %s",
                         component->info->description,
                         loki_getname_component(component->component));
@@ -431,11 +445,11 @@ void perform_uninstall_slot(GtkWidget* w, gpointer data)
 		gtk_progress_set_percentage(GTK_PROGRESS(progress), 1.0f);
 		break;
     }
-    widget = glade_xml_get_widget(uninstall_glade, "cancel_button");
+    widget = glade_xml_get_widget(uninstall_builder, "cancel_button");
     if ( widget ) {
         gtk_button_set_sensitive(widget, FALSE);
     }
-    widget = glade_xml_get_widget(uninstall_glade, "finished_button");
+    widget = glade_xml_get_widget(uninstall_builder, "finished_button");
     if ( widget ) {
         gtk_button_set_sensitive(widget, TRUE);
     }
@@ -505,41 +519,50 @@ int uninstall_ui(int argc, char *argv[])
     setenv("GTK_DATA_PREFIX", "", 1);
 #endif
 
-    gtk_init(&argc,&argv);
+gtk_init(&argc, &argv);
 
-    /* Disable GLib warnings that may be triggered by libglade */
-    g_log_set_handler ("libglade", G_LOG_LEVEL_WARNING | G_LOG_FLAG_RECURSION, log_handler, NULL);
+// Disable GLib warnings triggered by deprecated functionality, if needed (optional)
+g_log_set_handler("Gtk", G_LOG_LEVEL_WARNING | G_LOG_FLAG_RECURSION, log_handler, NULL);
 
-    /* Initialize Glade */
-    glade_init();
-    uninstall_glade = GLADE_XML_NEW(DATADIR "/" UNINSTALL_GLADE, "loki_uninstall"); 
+// Initialize GtkBuilder
+GtkBuilder *builder = gtk_builder_new();
+if (!gtk_builder_add_from_file(builder, DATADIR "/" UNINSTALL_GLADE, NULL)) {
+    g_print("Failed to load UI file\n");
+    return -1;
+}
 
-    /* Add all signal handlers defined in glade file */
-    glade_xml_signal_autoconnect(uninstall_glade);
+// Connect signal handlers defined in the UI file
+gtk_builder_connect_signals(builder, NULL);
 
-    /* Make sure the window is visible */
-    widget = glade_xml_get_widget(uninstall_glade, "uninstall_button");
-    if ( widget ) {
-        gtk_button_set_sensitive(widget, FALSE);
-    }
-    window = glade_xml_get_widget(uninstall_glade, "loki_uninstall");
-    gtk_widget_realize(window);
-    while( gtk_events_pending() ) {
-        gtk_main_iteration();
-    }
+// Get the uninstall button and make it insensitive
+widget = GTK_WIDGET(gtk_builder_get_object(builder, "uninstall_button"));
+if (widget) {
+    gtk_widget_set_sensitive(widget, FALSE);
+}
 
-    /* Add emergency signal handlers */
-    signal(SIGHUP, main_signal_abort);
-    signal(SIGINT, main_signal_abort);
-    signal(SIGQUIT, main_signal_abort);
-    signal(SIGTERM, main_signal_abort);
+// Get the main window and ensure it is realized and visible
+window = GTK_WIDGET(gtk_builder_get_object(builder, "loki_uninstall"));
+gtk_widget_realize(window);
+gtk_widget_show(window);
 
-    /* Fill in the list of products and components */
-    widget = glade_xml_get_widget(uninstall_glade, "uninstall_vbox");
-    if ( ! widget ) {
-        fprintf(stderr, _("No uninstall_vbox in glade file!\n"));
-        return(-1);
-    }
+// Handle pending GTK events
+while (gtk_events_pending()) {
+    gtk_main_iteration();
+}
+
+// Add emergency signal handlers
+signal(SIGHUP, main_signal_abort);
+signal(SIGINT, main_signal_abort);
+signal(SIGQUIT, main_signal_abort);
+signal(SIGTERM, main_signal_abort);
+
+// Get the uninstall_vbox and handle potential errors
+widget = GTK_WIDGET(gtk_builder_get_object(builder, "uninstall_vbox"));
+if (!widget) {
+    fprintf(stderr, _("No uninstall_vbox in UI file!\n"));
+    return -1;
+}
+
     gtk_container_foreach(GTK_CONTAINER(widget), empty_container, widget);
     for ( product_name=loki_getfirstproduct();
           product_name;

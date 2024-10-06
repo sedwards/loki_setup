@@ -1,5 +1,8 @@
 #include "rar.hpp"
 
+#define GUI
+#define _UNIX
+#define ALLOW_EXCEPTIONS
 
 #include "smallfn.cpp"
 

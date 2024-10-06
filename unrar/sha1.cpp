@@ -15,8 +15,8 @@ A million repetitions of "a"
 */
 
 #if !defined(LITTLE_ENDIAN) && !defined(BIG_ENDIAN)
-  #if defined(_M_IX86) || defined(_M_I86) || defined(__alpha)
-    #define LITTLE_ENDIAN
+  #if defined(_M_IX86) || defined(_M_I86) || defined(__arm__) || defined(__arm) || defined(__aarch64__)
+    #define LITTLE_ENDIAN 
   #else
     #error "LITTLE_ENDIAN or BIG_ENDIAN must be defined"
 	#endif
