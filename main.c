@@ -195,10 +195,12 @@ int main(int argc, char **argv)
     // If we're on Mac OS, we need to make sure the current working directoy
     //  is the same directoy as the .APP is in.  With Mac OS X, running from
     //  the finder and most other places makes the current directory to root.
+#if 0
 #define CARBON_MAX_PATH 1024
     char carbon_app_path[CARBON_MAX_PATH];
     carbon_GetAppPath(carbon_app_path, CARBON_MAX_PATH);
     chdir(carbon_app_path);
+#endif
 #endif
     install_path[0] = '\0';
     binary_path[0] = '\0';
@@ -359,6 +361,7 @@ int main(int argc, char **argv)
                 
 				/* Check if we should be root.  Under the Mac, we'll do the standard authorization
                    stuff that most installers do at startup. */
+#if 0
                 if ( GetProductRequireRoot(info) && geteuid()!=0 ) {
 #if defined(darwin)
 					carbon_AuthorizeUser();
@@ -370,6 +373,7 @@ int main(int argc, char **argv)
 					continue;
 #endif
                 }
+#endif
 
 				if ( info->product && GetProductInstallOnce(info) ) {
 					UI.prompt(_("\nThis product is already installed.\nUninstall it before running this program again.\n"), RESPONSE_OK);

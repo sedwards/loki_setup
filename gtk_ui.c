@@ -103,12 +103,7 @@
 #include "bools.h"
 #include "loki_launchurl.h"
 
-//#if defined(ENABLE_GTK2)
-#if defined(ENABLE_GTK3)
-    #define SETUP_GLADE SETUP_BASE "setup.gtk2.glade"
-#else
-    #define SETUP_GLADE SETUP_BASE "setup.glade"
-#endif
+#define SETUP_GLADE SETUP_BASE "loki_interface.gtk3.ui"
 
 #define LICENSE_FONT            \
         "-misc-fixed-medium-r-semicondensed-*-*-120-*-*-c-*-iso8859-8"
@@ -209,13 +204,18 @@ gint path_entry_keypress_slot(GtkWidget *widget, GdkEvent *event,
     return FALSE;
 }
 
+/******** GtkWidget porting Helper Function ************/
+static GtkWidget *get_widget(const char *widget_name) {
+    return GTK_WIDGET(gtk_builder_get_object(setup_glade, widget_name));
+}
+
 gint binary_path_combo_change_slot(GtkWidget *widget, GdkEvent *event, gpointer data)
 {
     const char *string;
     GtkWidget *binary_entry;
 
     // Use GtkBuilder to retrieve the "binary_entry" widget
-    binary_entry = GTK_WIDGET(gtk_builder_get_object(setup_glade, "binary_entry"));
+    binary_entry = get_widget( "binary_entry" );
 
     string = gtk_entry_get_text(GTK_ENTRY(binary_entry));
     if (string) {
@@ -240,7 +240,7 @@ gint path_combo_change_slot(GtkWidget *widget, GdkEvent *event, gpointer data)
     GtkWidget *install_entry;
 
     // Use GtkBuilder to retrieve the "install_entry" widget
-    install_entry = GTK_WIDGET(gtk_builder_get_object(setup_glade, "install_entry"));
+    install_entry = get_widget( "install_entry" );
 
     string = gtk_entry_get_text(GTK_ENTRY(install_entry));
     if (string) {
@@ -286,18 +286,26 @@ gint binary_path_entry_keypress_slot(GtkWidget *widget, GdkEvent *event,
     return FALSE;
 }
 
-gboolean setup_entry_binarypath_slot( GtkWidget* widget, GdkEventFocus *event, gpointer func_data )
+gboolean setup_entry_binarypath_slot(GtkWidget *widget, GdkEventFocus *event, gpointer func_data)
 {
-    const char* string;
-    string = gtk_entry_get_text( GTK_ENTRY(widget) );
-    if ( string ) {
+    const char *string;
+
+    // Get the text from the GtkEntry widget
+    string = gtk_entry_get_text(GTK_ENTRY(widget)); 
+    if (string) {
+        // Set the symlink path based on the entered text
         set_symlinkspath(cur_info, string);
-        if ( strcmp(string, cur_info->symlinks_path) != 0 ) {
+
+        // If the current symlink path differs from the entered text, update the entry
+        if (strcmp(string, cur_info->symlinks_path) != 0) {
             gtk_entry_set_text(GTK_ENTRY(widget), cur_info->symlinks_path);
         }
+
+        // Check if the install button should be enabled
         check_install_button();
     }
-	return FALSE;
+
+    return FALSE;  // Returning FALSE to propagate the event further
 }
 
 /* Computes a nice size for a dialog box */
@@ -371,36 +379,42 @@ static gboolean load_file_gtk3(GtkTextView *widget, const char *file)
     return (fp != NULL);
 }
 
+void on_class_continue_clicked(GtkWidget *w, gpointer data)
+{              
+    GtkWidget *widget = get_widget( "recommended_but" );
 
-void on_class_continue_clicked( GtkWidget  *w, gpointer data )
-{
-	GtkWidget *widget = glade_xml_get_widget(setup_glade, "recommended_but");
+    // Check if the current state is SETUP_CLASS
+    if (cur_state != SETUP_CLASS) {
+        return;
+    }
 
-	if ( cur_state != SETUP_CLASS ) {
-		return;
-	}
-	express_setup = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+    // Get the state of the express setup toggle button
+    express_setup = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+               
+    if (express_setup) {
+        const char *msg = check_for_installation(cur_info, NULL);
+        if (msg) {
+            char buf[BUFSIZ];
+            snprintf(buf, sizeof(buf),
+                     _("Installation could not proceed due to the following error:\n%s\nTry to use 'Expert' installation."), msg);
+            
+            gtkui_prompt(buf, RESPONSE_OK);
+            
+            widget = get_widget( "expert_but" );
+            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
+            return;
+        }
+    }      
 
-	if ( express_setup ) {
-		const char *msg = check_for_installation(cur_info, NULL);
-		if ( msg ) {
-			char buf[BUFSIZ];
-			snprintf(buf, sizeof(buf),
-					 _("Installation could not proceed due to the following error:\n%s\nTry to use 'Expert' installation."), 
-					 msg);
-			gtkui_prompt(buf, RESPONSE_OK);
-			widget = glade_xml_get_widget(setup_glade, "expert_but");
-			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
-			return;
-		}
-	}
-	/* Install desktop menu items */
-	if((!GetProductHasNoBinaries(cur_info)) && (GetProductInstallMenuItems(cur_info))) {
-		cur_info->options.install_menuitems = 1;
-	}
-	widget = glade_xml_get_widget(setup_glade, "setup_notebook");
-	gtk_notebook_set_page(GTK_NOTEBOOK(widget), OPTION_PAGE);
-	cur_state = SETUP_OPTIONS;
+    // Install desktop menu items if applicable
+    if ((!GetProductHasNoBinaries(cur_info)) && (GetProductInstallMenuItems(cur_info))) {
+        cur_info->options.install_menuitems = 1;
+    }
+
+    // Move to the next page in the setup notebook
+    widget = get_widget( "setup_notebook" );
+    gtk_notebook_set_current_page(GTK_NOTEBOOK(widget), OPTION_PAGE);
+    cur_state = SETUP_OPTIONS;
 }
 
 void setup_close_view_readme_slot( GtkWidget* w, gpointer data )
@@ -426,16 +440,16 @@ void setup_destroy_view_readme_slot(GtkWidget* w, gpointer data)
         /*
          * Re-enable the 'view readme' buttons (all 3 of them)
          */
-        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "button_readme"));
+        widget = get_widget( "button_readme" );
         gtk_widget_set_sensitive(widget, TRUE);
 
-        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "class_readme"));
+        widget = get_widget( "class_readme" );
         gtk_widget_set_sensitive(widget, TRUE);
 
-        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "view_readme_progress_button"));
+        widget = get_widget( "view_readme_progress_button" );
         gtk_widget_set_sensitive(widget, TRUE);
 
-        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "view_readme_end_button"));
+        widget = get_widget( "view_readme_end_button" );
         gtk_widget_set_sensitive(widget, TRUE);
     }
 }
@@ -463,16 +477,16 @@ void setup_button_view_readme_slot(GtkWidget *w, gpointer data)
         gtk_widget_show(readme);
 
         // Disable all related buttons
-        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "button_readme"));
+        widget = get_widget( "button_readme" );
         gtk_widget_set_sensitive(widget, FALSE);
 
-        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "class_readme"));
+        widget = get_widget( "class_readme" );
         gtk_widget_set_sensitive(widget, FALSE);
 
-        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "view_readme_progress_button"));
+        widget = get_widget( "view_readme_progress_button" );
         gtk_widget_set_sensitive(widget, FALSE);
 
-        widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "view_readme_end_button"));
+        widget = get_widget( "view_readme_end_button" );
         gtk_widget_set_sensitive(widget, FALSE);
     }
 }
@@ -492,18 +506,23 @@ void setup_button_license_agree_slot(GtkWidget *widget, gpointer func_data)
     cur_state = SETUP_README;
 }
 
-void setup_destroy_license_slot( GtkWidget* w, gpointer data )
-{
+void setup_destroy_license_slot(GtkWidget *w, gpointer data)
+{       
     /* !!! FIXME: this gets called more than once if LANG is set...not sure
      * !!! FIXME:  why, but we explicitly set setup_glade_license to NULL
      * !!! FIXME:  here so we don't touch an unref'd var.
      */
     if (setup_glade_license) {
         GtkWidget *widget;
-        widget = glade_xml_get_widget(setup_glade_license, "license_dialog");
+        
+        // Use the get_widget wrapper to retrieve the license dialog widget
+        widget = get_widget("license_dialog");
         gtk_widget_hide(widget);
+
         cur_state = SETUP_EXIT;
-        GLADE_XML_UNREF(setup_glade_license);
+
+        // Unreference the builder and set it to NULL
+        g_object_unref(setup_glade_license);
         setup_glade_license = NULL;
     }
 }
@@ -547,9 +566,9 @@ void setup_button_play_slot( GtkWidget* _widget, gpointer func_data )
 			  "root's home directory instead of your user account directory.");
 
         warning_dialog = WARNING_ROOT;
-        widget = glade_xml_get_widget(setup_glade, "setup_notebook");
-        gtk_notebook_set_page(GTK_NOTEBOOK(widget), WARNING_PAGE);
-        widget = glade_xml_get_widget(setup_glade, "warning_label");
+        widget = get_widget("setup_notebook");
+        gtk_notebook_set_current_page(GTK_NOTEBOOK(widget), WARNING_PAGE);
+        widget = get_widget("warning_label");
         gtk_label_set_text(GTK_LABEL(widget), warning_text);
     } else
 #endif
@@ -594,7 +613,7 @@ void setup_cdkey_entry_changed_slot(GtkEntry *entry, gpointer user_data)
 {
     const gchar *CDKey = gtk_entry_get_text( GTK_ENTRY(entry) );
     GtkWidget *button;
-    button = glade_xml_get_widget(setup_glade, "setup_button_cdkey_continue");
+    button = get_widget("setup_button_cdkey_continue");
 
     gtk_widget_set_sensitive(button, (*CDKey) ? TRUE : FALSE);
 }
@@ -604,7 +623,7 @@ void setup_button_cdkey_continue_slot( GtkWidget* widget, gpointer func_data )
     /* HACK: Use external cd key validation program, if it exists. --ryan. */
     #define CDKEYCHECK_PROGRAM "./vcdk"
     char cmd[sizeof (gCDKeyString) + sizeof (CDKEYCHECK_PROGRAM) + 64];
-    GtkWidget *entry = glade_xml_get_widget(setup_glade, "setup_cdkey_entry");
+    GtkWidget *entry = get_widget("setup_cdkey_entry");
     char *CDKey = (char *) gtk_entry_get_text( GTK_ENTRY(entry) );
     char *p;
 
@@ -642,7 +661,7 @@ void setup_button_install_slot( GtkWidget* widget, gpointer func_data )
 	const char* message;
 	char* explanation = NULL;
     GtkWidget *notebook;
-    notebook = glade_xml_get_widget(setup_glade, "setup_notebook");
+    notebook = get_widget("setup_notebook");
 
 	message = check_for_installation(cur_info, &explanation);
 
@@ -663,10 +682,10 @@ void setup_button_install_slot( GtkWidget* widget, gpointer func_data )
     /* If CDKEY attribute was specified, show the CDKEY screen */
     if(GetProductCDKey(cur_info))
     {
-        GtkWidget *button = glade_xml_get_widget(setup_glade, "setup_button_cdkey_continue");
-        GtkWidget *entry = glade_xml_get_widget(setup_glade, "setup_cdkey_entry");
+        GtkWidget *button = get_widget("setup_button_cdkey_continue");
+        GtkWidget *entry = get_widget("setup_cdkey_entry");
 
-		gtk_notebook_set_page(GTK_NOTEBOOK(notebook), CDKEY_PAGE);
+		gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), CDKEY_PAGE);
         gtk_entry_set_text(GTK_ENTRY(entry), "");
         gtk_widget_set_sensitive(button, FALSE);
 
@@ -676,7 +695,7 @@ void setup_button_install_slot( GtkWidget* widget, gpointer func_data )
             return;
     }
 
-    gtk_notebook_set_page(GTK_NOTEBOOK(notebook), COPY_PAGE);
+    gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), COPY_PAGE);
     cur_state = SETUP_INSTALL;
 }
 
@@ -707,8 +726,8 @@ static void check_install_button(void)
     message = check_for_installation(cur_info, NULL);
 
     /* Get the appropriate widgets and set the new state */
-    options_status = glade_xml_get_widget(setup_glade, "options_status");
-    install_widget = glade_xml_get_widget(setup_glade, "button_install");
+    options_status = get_widget("options_status");
+    install_widget = get_widget("button_install");
 
     if ( !message ) {
         message = _("Ready to install!");
@@ -718,7 +737,6 @@ static void check_install_button(void)
     else
         gtk_widget_set_sensitive(install_widget, FALSE);
     gtk_label_set_text(GTK_LABEL(options_status), message);
-
 }
 
 static void update_size(void)
@@ -727,7 +745,7 @@ static void update_size(void)
     char text[32];
 
     // Use GtkBuilder to get the "label_install_size" widget
-    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "label_install_size"));
+    widget = get_widget( "label_install_size" );
     if (widget) {
         // Format the install size as MB
         snprintf(text, sizeof(text), _("%d MB"), (int)BYTES2MB(cur_info->install_size));
@@ -741,24 +759,25 @@ static void update_size(void)
 }
 
 static void update_space(void)
-{
+{   
     GtkWidget *widget;
-    char text[32];
+    char text[32]; 
     int diskspace;
 
-    // Use GtkBuilder to get the "label_free_space" widget
-    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "label_free_space"));
+    // Retrieve the "label_free_space" widget from GtkBuilder
+    widget = get_widget( "label_free_space" );
+
     if (widget) {
-        // Detect available disk space
+        // Detect the available disk space at the install path
         diskspace = detect_diskspace(cur_info->install_path);
-
-        // Format the available space as MB
+        
+        // Format the detected disk space into a string (in MB)
         snprintf(text, sizeof(text), _("%d MB"), diskspace);
-
-        // Update the label text
+        
+        // Update the label widget to display the available space
         gtk_label_set_text(GTK_LABEL(widget), text);
-
-        // Check if the install button should be enabled
+        
+        // Check if the install button should be enabled based on available space
         check_install_button();
     }
 }
@@ -771,7 +790,7 @@ static void empty_container(GtkWidget *widget, gpointer data)
 static void enable_tree(xmlNodePtr node, GtkWidget *window)
 {
     if (strcmp((char *)node->name, "option") == 0) {
-        // Use g_object_get_data() instead of gtk_object_get_data() in GTK3
+        // Use g_object_get_data() instead of g_object_get_data() in GTK3
         GtkWidget *button = (GtkWidget*)g_object_get_data(G_OBJECT(window),
                                                           get_option_name(cur_info, node, NULL, 0));
         if (button) {
@@ -817,8 +836,8 @@ void on_use_binary_toggled ( GtkWidget* widget, gpointer func_data)
     /*-------------------------------------------------------------------------
     ** Pick up widget handles
     **-----------------------------------------------------------------------*/
-    binary_path_widget = glade_xml_get_widget(setup_glade, "binary_path");
-    binary_label_widget = glade_xml_get_widget(setup_glade, "binary_label");
+    binary_path_widget = get_widget("binary_path");
+    binary_label_widget = get_widget("binary_label");
 
     /*-------------------------------------------------------------------------
     ** Mark the appropriate widgets active or inactive
@@ -833,7 +852,7 @@ void on_use_binary_toggled ( GtkWidget* widget, gpointer func_data)
     **      value and restash it into the global symlinkspath.
     **-----------------------------------------------------------------------*/
     if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget))) {
-      GtkWidget *binary_entry = GTK_WIDGET(gtk_builder_get_object(setup_glade, "binary_entry"));
+      GtkWidget *binary_entry = get_widget( "binary_entry") ;
       const gchar *string = gtk_entry_get_text(GTK_ENTRY(binary_entry));
     } else {
       string = NULL;
@@ -846,12 +865,12 @@ void on_use_binary_toggled ( GtkWidget* widget, gpointer func_data)
 void setup_checkbox_option_slot( GtkWidget* widget, gpointer func_data)
 {
 	GtkWidget *window;
-	xmlNodePtr node, data_node = (xmlNodePtr) func_data; //gtk_object_get_data(GTK_OBJECT(widget),"data");
+	xmlNodePtr node, data_node = (xmlNodePtr) func_data; 
 	
 	if(!data_node)
 		return;
 	
-	window = glade_xml_get_widget(setup_glade, "setup_window");
+	window = get_widget("setup_window");
 
 	//if ( GTK_TOGGLE_BUTTON(widget)->active ) {
         if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget))) {
@@ -872,12 +891,21 @@ void setup_checkbox_option_slot( GtkWidget* widget, gpointer func_data)
 				{
 					GtkWidget *license;
 					GtkWidget *license_widget;
-					
-					if (!setup_glade_license)
-						setup_glade_license = GLADE_XML_NEW(glade_file, "license_dialog");
-					glade_xml_signal_autoconnect(setup_glade_license);
-					license = glade_xml_get_widget(setup_glade_license, "license_dialog");
-					license_widget = glade_xml_get_widget(setup_glade_license, "license_area");
+
+
+if (!setup_glade_license) {
+    setup_glade_license = gtk_builder_new();
+    gtk_builder_add_from_file(setup_glade_license, glade_file, NULL);
+}
+
+// Automatically connect signals defined in the UI file
+gtk_builder_connect_signals(setup_glade_license, NULL);
+
+// Retrieve the license dialog and license area widgets
+license = GTK_WIDGET(gtk_builder_get_object(setup_glade_license, "license_dialog"));
+license_widget = GTK_WIDGET(gtk_builder_get_object(setup_glade_license, "license_area"));
+
+
 					if ( license && license_widget ) {
 						install_state start;
 #if ! defined(ENABLE_GTK2)
@@ -941,8 +969,7 @@ void setup_checkbox_option_slot( GtkWidget* widget, gpointer func_data)
 			if ( !strcmp((char *)node->name, "option") ) {
 				GtkWidget *button;
 				
-				button = (GtkWidget*)gtk_object_get_data(GTK_OBJECT(window),
-														 get_option_name(cur_info, node, NULL, 0));
+				button = (GtkWidget*)g_object_get_data((window),get_option_name(cur_info, node, NULL, 0));
 				if(button){ /* This recursively calls this function */
 					gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), FALSE);
 					gtk_widget_set_sensitive(button, FALSE);
@@ -952,8 +979,7 @@ void setup_checkbox_option_slot( GtkWidget* widget, gpointer func_data)
 				for ( child = XML_CHILDREN(node); child; child = child->next) {
 					GtkWidget *button;
 					
-					button = (GtkWidget*)gtk_object_get_data(GTK_OBJECT(window),
-															 get_option_name(cur_info, child, NULL, 0));
+					button = (GtkWidget*)g_object_get_data((window),get_option_name(cur_info, child, NULL, 0));
 					if(button){ /* This recursively calls this function */
 						gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), FALSE);
 						gtk_widget_set_sensitive(button, FALSE);
@@ -978,7 +1004,6 @@ void setup_checkbox_menuitems_slot(GtkWidget* widget, gpointer func_data)
     cur_info->options.install_menuitems = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 }
 
-#ifndef ENABLE_GTK2
 static yesno_answer prompt_response;
 
 static void prompt_button_slot( GtkWidget* widget, gpointer func_data)
@@ -1000,7 +1025,6 @@ static void prompt_okbutton_slot( GtkWidget* widget, gpointer func_data)
 {
     prompt_response = RESPONSE_OK;
 }
-#endif
 
 static yesno_answer gtkui_prompt(const char *txt, yesno_answer suggest)
 {
@@ -1034,8 +1058,8 @@ static yesno_answer gtkui_prompt(const char *txt, yesno_answer suggest)
     
     /* Ensure that the dialog box is destroyed when the user clicks ok. */
     
-    gtk_signal_connect_object (GTK_OBJECT (ok_button), "clicked",
-                               GTK_SIGNAL_FUNC (prompt_okbutton_slot), GTK_OBJECT(dialog));
+    gtk_signal_connect_object ((ok_button), "clicked",
+                               GTK_SIGNAL_FUNC (prompt_okbutton_slot), (dialog));
 
 	gtk_signal_connect_object(GTK_OBJECT(dialog), "delete-event",
 							  GTK_SIGNAL_FUNC(prompt_nobutton_slot), GTK_OBJECT(dialog));
@@ -1206,7 +1230,7 @@ static void init_install_path(void)
     char *home_directory = getenv("HOME");
 
     // Get the install path widget from GtkBuilder
-    install_path_widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "install_path"));
+    install_path_widget = get_widget( "install_path") ;
 
     // If the product is a meta-installer, hide the install path widget
     if (GetProductIsMeta(cur_info)) {
@@ -1292,7 +1316,19 @@ enough_of_config:
             install_path_list = g_list_append( install_path_list, strdup(expanded_path));
         }
     }
-    gtk_combo_set_popdown_strings( GTK_COMBO(install_path_widget), install_path_list );
+
+// Assuming install_path_list is a GList* containing the items for the combo box.
+GList *iter;
+GtkWidget *combo_box = gtk_combo_box_text_new();
+
+for (iter = install_path_list; iter != NULL; iter = iter->next) {
+    const char *install_path = (const char *)iter->data;
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_box), install_path);
+}
+
+// Set the combo box as your new install_path_widget
+install_path_widget = combo_box;
+
     /* !!! FIXME: Should we g_list_free ( install_path_list ) or not? */
     
     /*gtk_entry_set_text( GTK_ENTRY(GTK_COMBO(install_path_widget)->entry), cur_info->install_path );*/
@@ -1308,7 +1344,6 @@ enough_of_config:
     if(cur_info->install_path != install_path_list->data)
 		strncpy(cur_info->install_path, install_path_list->data, sizeof (cur_info->install_path));
 
-    gtk_combo_set_use_arrows( GTK_COMBO(install_path_widget), 0);
 }
 
 static void init_man_path(void)
@@ -1363,9 +1398,18 @@ static void init_man_path(void)
 		list = g_list_append(list, "/usr/man");
 	}
 
-	widget = glade_xml_get_widget(setup_glade, "manpage_combo");
-	gtk_combo_set_popdown_strings( GTK_COMBO(widget), list );
-	set_manpath(cur_info, list->data);
+        // Retrieve the manpage_combo widget from GtkBuilder
+        widget = get_widget( "manpage_combo" );
+
+        // Ensure the widget is a GtkComboBoxText and append items
+        if (GTK_IS_COMBO_BOX_TEXT(widget)) {
+           GList *iter;
+           for (iter = list; iter != NULL; iter = iter->next) {
+              gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(widget), (const gchar *)iter->data);
+           }
+        }
+
+        set_manpath(cur_info, list->data);
 }
 
 static void init_binary_path(void)
@@ -1376,7 +1420,7 @@ static void init_binary_path(void)
     char* path;
     int change_default = TRUE;
 
-    widget = glade_xml_get_widget(setup_glade, "binary_path");
+    widget = get_widget( "binary_path" );
 
     if ( GetProductIsMeta(cur_info) ) {
 		gtk_widget_hide(widget);
@@ -1433,9 +1477,19 @@ static void init_binary_path(void)
 		}
     }
 
-    if ( list ) {
-        gtk_combo_set_popdown_strings( GTK_COMBO(widget), list );
+if (list) {
+    GList *iter;
+
+    // Clear the existing combo box items if necessary
+    gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(widget));
+
+    // Iterate through the list and add each item to the combo box
+    for (iter = list; iter != NULL; iter = iter->next) {
+        const char *item = (const char *)iter->data;
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(widget), item);
     }
+}
+
     if ( change_default && list && g_list_length(list) ) {
         set_symlinkspath(cur_info, g_list_nth(list,0)->data);
     }
@@ -1455,14 +1509,13 @@ static void init_binary_path(void)
 
     //gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(widget), cur_info->symlinks_path);
 
-    gtk_combo_set_use_arrows( GTK_COMBO(widget), 0);
 }
 
 static void init_menuitems_option(install_info *info)
 {
     GtkWidget *widget;
 
-    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "setup_menuitems_checkbox"));
+    widget = get_widget( "setup_menuitems_checkbox" );
     if (widget) {
         if ((!GetProductHasNoBinaries(info)) && (GetProductInstallMenuItems(info))) {
             setup_checkbox_menuitems_slot(widget, NULL);
@@ -1549,10 +1602,10 @@ static void parse_option(install_info *info, const char *component, xmlNodePtr n
 	log_debug("Parsing option: '%s'\n", text);
 	if ( GetProductIsMeta(info) ) {
 		button = gtk_radio_button_new_with_label(radio_list, text);
-		radio_list = gtk_radio_button_group(GTK_RADIO_BUTTON(button));
+		radio_list = gtk_radio_button_get_group(GTK_RADIO_BUTTON(button));
 	} else if ( exclusive ) {
 		button = gtk_radio_button_new_with_label(*radio, text);
-		*radio = gtk_radio_button_group(GTK_RADIO_BUTTON(button));
+		*radio = gtk_radio_button_get_group(GTK_RADIO_BUTTON(button));
 	} else {
 		button = gtk_check_button_new_with_label(text);
 	}
@@ -1565,11 +1618,11 @@ static void parse_option(install_info *info, const char *component, xmlNodePtr n
 
     /* Set the data associated with the button */
 	if ( button ) {
-		gtk_object_set_data(GTK_OBJECT(button), "data", (gpointer)node);
+		g_object_set_data((button), "data", (gpointer)node);
 
 		/* Register the button in the window's private data */
-		window = glade_xml_get_widget(setup_glade, "setup_window");
-		gtk_object_set_data(GTK_OBJECT(window), name, (gpointer)button);
+		window = get_widget("setup_window");
+		g_object_set_data((window), name, (gpointer)button);
 	}
 
     /* Check for required option */
@@ -1584,10 +1637,9 @@ static void parse_option(install_info *info, const char *component, xmlNodePtr n
 		install = FALSE;
 		gtk_widget_set_sensitive(GTK_WIDGET(button), FALSE);
     }
-	if ( button ) {
-		gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(button), FALSE, FALSE, 0);
-		gtk_signal_connect(GTK_OBJECT(button), "toggled",
-						   GTK_SIGNAL_FUNC(setup_checkbox_option_slot), (gpointer)node);
+         if (button) {
+                gtk_box_pack_start(GTK_BOX(box), button, FALSE, FALSE, 0);
+                g_signal_connect(button, "toggled", G_CALLBACK(setup_checkbox_option_slot), (gpointer)node);
 		gtk_widget_show(button);
 	}
 
@@ -1663,9 +1715,9 @@ static void update_image(const char *image_file, gboolean left)
 	image_path[sizeof(image_path)-1] = '\0';
 
 	if(left)
-		frame = glade_xml_get_widget(setup_glade, "image_frame");
+		frame = get_widget("image_frame");
 	else
-		frame = glade_xml_get_widget(setup_glade, "image_frame_top");
+		frame = get_widget("image_frame_top");
 
 	g_return_if_fail(frame != NULL);
 
@@ -1696,9 +1748,9 @@ static void update_image(const char *image_file, gboolean left)
 
     // Get the correct frame widget using GtkBuilder
     if (left)
-        frame = GTK_WIDGET(gtk_builder_get_object(setup_glade, "image_frame"));
+        frame = get_widget( "image_frame" );
     else
-        frame = GTK_WIDGET(gtk_builder_get_object(setup_glade, "image_frame_top"));
+        frame = get_widget( "image_frame_top" );
 
     // Ensure the frame exists
     g_return_if_fail(frame != NULL);
@@ -1776,16 +1828,16 @@ setup_glade = gtk_builder_new();
 gtk_builder_add_from_file(setup_glade, glade_file, NULL);
 
 // Retrieve the install_path and set up the combo box
-install_path = GTK_WIDGET(gtk_builder_get_object(setup_glade, "install_path"));
-install_entry = GTK_WIDGET(gtk_builder_get_object(setup_glade, "install_entry"));
+install_path = get_widget( "install_path" );
+install_entry = get_widget( "install_entry" );
 
 // Connect signals to manage enabling/disabling the Install button
 g_signal_connect_after(install_path, "changed", G_CALLBACK(path_combo_change_slot), NULL);
 g_signal_connect_after(install_entry, "key_press_event", G_CALLBACK(path_entry_keypress_slot), NULL);
 
 // Retrieve the binary_path and set up the combo box
-binary_path = GTK_WIDGET(gtk_builder_get_object(setup_glade, "binary_path"));
-binary_entry = GTK_WIDGET(gtk_builder_get_object(setup_glade, "binary_entry"));
+binary_path = get_widget( "binary_path" );
+binary_entry = get_widget( "binary_entry" );
 
 // Connect signals for binary_path and binary_entry
 g_signal_connect_after(binary_path, "changed", G_CALLBACK(binary_path_combo_change_slot), NULL);
@@ -1801,13 +1853,13 @@ gtk_builder_connect_signals(setup_glade, NULL);
     ** Connect a signal handle to control whether or not the symlink
     **  should be installed
     **------------------------------------------------------------------------*/
-    symlink_checkbox = glade_xml_get_widget(setup_glade, "symlink_checkbox");
+    symlink_checkbox = get_widget("symlink_checkbox");
     gtk_signal_connect(GTK_OBJECT(symlink_checkbox), "toggled",
 			   GTK_SIGNAL_FUNC(on_use_binary_toggled), NULL);
 #endif /*0*/
 
 // Set up the window title
-window = GTK_WIDGET(gtk_builder_get_object(setup_glade, "setup_window"));
+window = get_widget( "setup_window" );
 if (info->component) {
     snprintf(title, sizeof(title), _("%s / %s Setup"), info->desc, GetProductComponent(info));
 } else {
@@ -1816,7 +1868,7 @@ if (info->component) {
 gtk_window_set_title(GTK_WINDOW(window), title);
 
 // Set the initial state for the notebook
-notebook = GTK_WIDGET(gtk_builder_get_object(setup_glade, "setup_notebook"));
+notebook = get_widget( "setup_notebook" );
 
 if (noninteractive) {
     gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), COPY_PAGE);
@@ -1824,7 +1876,7 @@ if (noninteractive) {
     gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), CLASS_PAGE);
 
     // Workaround for weird GTK behavior on older systems
-    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "class_continue"));
+    widget = get_widget( "class_continue" );
     gtk_widget_set_sensitive(widget, FALSE);
 } else {
     gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), OPTION_PAGE);
@@ -1836,58 +1888,58 @@ gtk_widget_queue_draw(window);
 // Disable the "View Readme" button if no README available
 if (!GetProductREADME(cur_info, NULL)) {
     // Get the button widgets and modify their properties
-    button = GTK_WIDGET(gtk_builder_get_object(setup_glade, "button_readme"));
+    button = get_widget( "button_readme" );
     gtk_widget_set_sensitive(button, FALSE);
 
-    button = GTK_WIDGET(gtk_builder_get_object(setup_glade, "view_readme_progress_button"));
+    button = get_widget( "view_readme_progress_button" );
     gtk_widget_hide(button);
 
-    button = GTK_WIDGET(gtk_builder_get_object(setup_glade, "view_readme_end_button"));
+    button = get_widget( "view_readme_end_button" );
     gtk_widget_hide(button);
 
-    button = GTK_WIDGET(gtk_builder_get_object(setup_glade, "class_readme"));
+    button = get_widget( "class_readme" );
     gtk_widget_hide(button);
 }
 
 // Set the text for some blank labels
-widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "current_option_label"));
+widget = get_widget( "current_option_label" );
 if (widget) {
     gtk_label_set_text(GTK_LABEL(widget), "");
 }
 
-widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "current_file_label"));
+widget = get_widget( "current_file_label" );
 if (widget) {
     gtk_label_set_text(GTK_LABEL(widget), "");
 }
 
 // Disable useless widgets for meta-installer
 if (GetProductIsMeta(info)) {
-    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "global_frame"));
+    widget = get_widget( "global_frame" );
     if (widget) {
         gtk_widget_hide(widget);
     }
 
-    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "label_free_space"));
+    widget = get_widget( "label_free_space" );
     if (widget) {
         gtk_widget_hide(widget);
     }
 
-    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "free_space_label"));
+    widget = get_widget( "free_space_label" );
     if (widget) {
         gtk_widget_hide(widget);
     }
 
-    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "label_install_size"));
+    widget = get_widget( "label_install_size" );
     if (widget) {
         gtk_widget_hide(widget);
     }
 
-    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "estim_size_label"));
+    widget = get_widget( "estim_size_label" );
     if (widget) {
         gtk_widget_hide(widget);
     }
 
-    widget = GTK_WIDGET(gtk_builder_get_object(setup_glade, "install_separator"));
+    widget = get_widget( "install_separator" );
     if (widget) {
         gtk_widget_hide(widget);
     }
@@ -1896,25 +1948,25 @@ if (GetProductIsMeta(info)) {
 
     /* Disable the path fields if they were provided via command line args */
     if (disable_install_path) {
-        widget = glade_xml_get_widget(setup_glade, "install_path");
+        widget = get_widget("install_path");
 		gtk_widget_set_sensitive(widget, FALSE);
     }
     if (disable_binary_path) {
-        widget = glade_xml_get_widget(setup_glade, "binary_path");
+        widget = get_widget("binary_path");
 		gtk_widget_set_sensitive(widget, FALSE);
     }
 	if (GetProductHasNoBinaries(info)) {
-        widget = glade_xml_get_widget(setup_glade, "binary_path");
+        widget = get_widget("binary_path");
 		if(widget) gtk_widget_hide(widget);
-		widget = glade_xml_get_widget(setup_glade, "binary_label");
+		widget = get_widget("binary_label");
 		if(widget) gtk_widget_hide(widget);
-		widget = glade_xml_get_widget(setup_glade, "setup_menuitems_checkbox");
+		widget = get_widget("setup_menuitems_checkbox");
 		if(widget) gtk_widget_hide(widget);
 	}
 	if ( !GetProductHasManPages(info) ) {
-        widget = glade_xml_get_widget(setup_glade, "manpage_combo");
+        widget = get_widget("manpage_combo");
 		if(widget) gtk_widget_hide(widget);
-        widget = glade_xml_get_widget(setup_glade, "manpage_label");
+        widget = get_widget("manpage_label");
 		if(widget) gtk_widget_hide(widget);
 	}
 	/*--------------------------------------------------------------------
@@ -1923,7 +1975,7 @@ if (GetProductIsMeta(info)) {
 	**      haven't asked for that feature.
 	**------------------------------------------------------------------*/
 	if (GetProductHasNoBinaries(info) || (!GetProductHasPromptBinaries(info))) {
-		widget = glade_xml_get_widget(setup_glade, "symlink_checkbox");
+		widget = get_widget("symlink_checkbox");
 		if (widget)	gtk_widget_hide(widget);
 	}
 
@@ -1933,7 +1985,7 @@ if (GetProductIsMeta(info)) {
     
 	/* Check if we should check "Expert" installation by default */
 	if ( check_for_installation(info, NULL) ) {
-		widget = glade_xml_get_widget(setup_glade, "expert_but");
+		widget = get_widget("expert_but");
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
 	}
     
@@ -2008,10 +2060,10 @@ static install_state gtkui_readme(install_info *info)
 static install_state gtkui_pick_class(install_info *info)
 {
 	/* Enable the Continue button now */
-	GtkWidget *widget = glade_xml_get_widget(setup_glade, "class_continue");
+	GtkWidget *widget = get_widget("class_continue");
 
 	/* Make sure the window is being shown */
-    gtk_widget_show(glade_xml_get_widget(setup_glade, "setup_window"));
+    gtk_widget_show(get_widget("setup_window"));
 
 	gtk_widget_set_sensitive(widget, TRUE);
 	return iterate_for_state();
@@ -2041,7 +2093,7 @@ static install_state gtkui_setup(install_info *info)
     xmlNodePtr node;
 
     // Use GtkBuilder to get the setup window
-    window = GTK_WIDGET(gtk_builder_get_object(setup_glade, "setup_window"));
+    window = get_widget( "setup_window" );
 
     // Make sure the window is being shown
     gtk_widget_show(window);
@@ -2052,12 +2104,12 @@ static install_state gtkui_setup(install_info *info)
     init_man_path();
 
     if (express_setup) {
-        GtkWidget *notebook = GTK_WIDGET(gtk_builder_get_object(setup_glade, "setup_notebook"));
+        GtkWidget *notebook = get_widget( "setup_notebook" );
         gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), COPY_PAGE);
 
         // Must hide cancel button if reinstalling/upgrading, or install can be mangled
         if (info->options.reinstalling) {
-            GtkWidget *button = GTK_WIDGET(gtk_builder_get_object(setup_glade, "cancel_progress_button"));
+            GtkWidget *button = get_widget( "cancel_progress_button" );
             gtk_widget_hide(button);
         }
 
@@ -2065,7 +2117,7 @@ static install_state gtkui_setup(install_info *info)
     }
 
     // Go through the install options
-    options = GTK_WIDGET(gtk_builder_get_object(setup_glade, "option_vbox"));
+    options = get_widget("option_vbox");
     gtk_container_foreach(GTK_CONTAINER(options), empty_container, options);
     info->install_size = 0;
     node = XML_CHILDREN(XML_ROOT(info->config));
@@ -2139,99 +2191,6 @@ static install_state gtkui_setup(install_info *info)
     return iterate_for_state();
 }
 
-
-#if 0
-static install_state gtkui_setup(install_info *info)
-{
-    GtkWidget *window;
-    GtkWidget *options;
-    xmlNodePtr node;
-
-    window = glade_xml_get_widget(setup_glade, "setup_window");
-	/* Make sure the window is being shown */
-    gtk_widget_show(window);
-
-	/* Set paths regardless of whether we are in express or not */
-    init_install_path();
-    init_binary_path();
-	init_man_path();
-
-    if ( express_setup ) {
-		GtkWidget *notebook = glade_xml_get_widget(setup_glade, "setup_notebook");
-		gtk_notebook_set_page(GTK_NOTEBOOK(notebook), COPY_PAGE);
-		/* Must hide cancel button if reinstalling/upgrading, or install can be mangled. */
-		if ( info->options.reinstalling ) {
-			GtkWidget *button = glade_xml_get_widget(setup_glade, "cancel_progress_button");
-			gtk_widget_hide(button);
-		}
-		return cur_state = SETUP_INSTALL;
-    }
-
-    /* Go through the install options */
-    options = glade_xml_get_widget(setup_glade, "option_vbox");
-    gtk_container_foreach(GTK_CONTAINER(options), empty_container, options);
-    info->install_size = 0;
-    node = XML_CHILDREN(XML_ROOT(info->config));
-    radio_list = NULL;
-    in_setup = TRUE;
-    while ( node ) {
-		if ( ! strcmp((char *)node->name, "option") ) {
-			parse_option(info, NULL, node, window, options, 0, NULL, 0, 0, NULL);
-		} else if ( ! strcmp((char *)node->name, "exclusive") ) {
-			xmlNodePtr child;
-			GSList *list = NULL;
-			int reinst = GetReinstallNode(info, node);
-			for ( child = XML_CHILDREN(node); child; child = child->next) {
-				parse_option(info, NULL, child, window, options, 0, NULL, 1, reinst, &list);
-			}
-		} else if ( ! strcmp((char *)node->name, "component") ) {
-			char *arch = (char *)xmlGetProp(node, BAD_CAST "arch"),
-				*libc = (char *)xmlGetProp(node, BAD_CAST "libc"),
-				*distro = (char *)xmlGetProp(node, BAD_CAST "distro"),
-				*cond = (char *)xmlGetProp(node, BAD_CAST "if");
-
-			if ( match_arch(info, arch) &&
-				 match_libc(info, libc) &&
-				 match_distro(info, distro) && match_condition(cond) ) {
-                xmlNodePtr child;
-				char *name = (char *)xmlGetProp(node, BAD_CAST "name");
-
-                if ( xmlGetProp(node, BAD_CAST "showname") ) {
-                    GtkWidget *widget = gtk_hseparator_new();
-                    gtk_box_pack_start(GTK_BOX(options), GTK_WIDGET(widget), FALSE, FALSE, 0);
-                    gtk_widget_show(widget);                
-                    widget = gtk_label_new(name);
-                    gtk_box_pack_start(GTK_BOX(options), GTK_WIDGET(widget), FALSE, FALSE, 10);
-                    gtk_widget_show(widget);
-                }
-                for ( child = XML_CHILDREN(node); child; child = child->next) {
-					if ( ! strcmp((char *)child->name, "option") ) {
-						parse_option(info, name, child, window, options, 0, NULL, 0, 0, NULL);
-					} else if ( ! strcmp((char *)child->name, "exclusive") ) {
-						xmlNodePtr child2;
-						GSList *list = NULL;
-						int reinst = GetReinstallNode(info, child);
-						for ( child2 = XML_CHILDREN(child); child2; child2 = child2->next) {
-							parse_option(info, name, child2, window, options, 0, NULL, 1, reinst, &list);
-						}
-					}
-                }
-				xmlFree(name);
-            }
-			xmlFree(arch); xmlFree(libc); xmlFree(distro); xmlFree(cond);			
-		}
-		node = node->next;
-    }
-    update_size();
-    update_space();
-    init_menuitems_option(info);
-
-    in_setup = FALSE;
-
-    return iterate_for_state();
-}
-#endif
-
 static int gtkui_update(install_info *info, const char *path, size_t progress, size_t size, const char *current)
 {
     static gfloat last_update = -1.0;
@@ -2274,11 +2233,11 @@ static int gtkui_update(install_info *info, const char *path, size_t progress, s
         } else {
             last_update = new_update;
         }
-        widget = glade_xml_get_widget(setup_glade, "current_option_label");
+        widget = get_widget("current_option_label");
         if ( widget ) {
             gtk_label_set_text( GTK_LABEL(widget), current);
         }
-        widget = glade_xml_get_widget(setup_glade, "current_file_label");
+        widget = get_widget("current_file_label");
         if ( widget ) {
             text = path;
             /* Remove the install path from the string */
@@ -2292,8 +2251,11 @@ static int gtkui_update(install_info *info, const char *path, size_t progress, s
             }
             gtk_label_set_text( GTK_LABEL(widget), text);
         }
-        widget = glade_xml_get_widget(setup_glade, "current_file_progress");
-        gtk_progress_bar_update(GTK_PROGRESS_BAR(widget), new_update);
+        widget = get_widget("current_file_progress");
+
+//        gtk_progress_bar_update(GTK_PROGRESS_BAR(widget), new_update);
+          gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(widget), new_update );
+
         new_update = (gdouble)info->installed_bytes / (gdouble)info->install_size;
 		last_installed_bytes=(gdouble)info->installed_bytes;
 		if (new_update > 1.0) {
@@ -2301,8 +2263,12 @@ static int gtkui_update(install_info *info, const char *path, size_t progress, s
 		} else if (new_update < 0.0) {
 			new_update = 0.0;
 		}
-        widget = glade_xml_get_widget(setup_glade, "total_file_progress");
-        gtk_progress_bar_update(GTK_PROGRESS_BAR(widget), new_update);
+        widget = get_widget("total_file_progress");
+
+//        gtk_progress_bar_update(GTK_PROGRESS_BAR(widget), new_update);
+          gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(widget), new_update );
+
+
     }
 	gtkui_idle(info);
 	return TRUE;
@@ -2313,13 +2279,13 @@ static void gtkui_abort(install_info *info)
     GtkWidget *notebook, *w;
 
 	/* No point in waiting for a change of state if the window is not there */
-	w = glade_xml_get_widget(setup_glade, "setup_window");
-	if ( !w || ! GTK_WIDGET_VISIBLE(w) )
+	w = get_widget("setup_window");
+	if ( !w || ! gtk_widget_get_visible(w) )
 		return;
 
     if ( setup_glade ) {
-        notebook = glade_xml_get_widget(setup_glade, "setup_notebook");
-        gtk_notebook_set_page(GTK_NOTEBOOK(notebook), ABORT_PAGE);
+        notebook = get_widget("setup_notebook");
+        gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), ABORT_PAGE);
         iterate_for_state();
 		gtk_widget_hide(w);
     } else {
@@ -2335,17 +2301,17 @@ static install_state gtkui_website(install_info *info)
     const char *website_text;
     int do_launch;
 
-    notebook = glade_xml_get_widget(setup_glade, "setup_notebook");
-    gtk_notebook_set_page(GTK_NOTEBOOK(notebook), WEBSITE_PAGE);
+    notebook = get_widget("setup_notebook");
+    gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), WEBSITE_PAGE);
 
     /* Add the proper product text */
-    widget = glade_xml_get_widget(setup_glade, "website_product_label");
+    widget = get_widget("website_product_label");
     gtk_label_set_text(GTK_LABEL(widget), GetProductDesc(info));
 
     /* Add special website text if desired */
     website_text = GetWebsiteText(info);
     if ( website_text ) {
-        widget = glade_xml_get_widget(setup_glade, "website_text_label");
+        widget = get_widget("website_text_label");
         gtk_label_set_text(GTK_LABEL(widget), website_text);
     }
 
@@ -2353,10 +2319,10 @@ static install_state gtkui_website(install_info *info)
     do_launch = 0;
     if ( strcmp(GetAutoLaunchURL(info), "true") == 0 ) {
         do_launch = 1;
-        hideme = glade_xml_get_widget(setup_glade, "auto_url_no");
+        hideme = get_widget("auto_url_no");
     } else {
         do_launch = 0;
-        hideme = glade_xml_get_widget(setup_glade, "auto_url_yes");
+        hideme = get_widget("auto_url_yes");
     }
     gtk_widget_hide(hideme);
 
@@ -2372,13 +2338,13 @@ static install_state gtkui_complete(install_info *info)
     GtkWidget *widget;
     char text[1024];
 
-    widget = glade_xml_get_widget(setup_glade, "setup_notebook");
-    gtk_notebook_set_page(GTK_NOTEBOOK(widget), DONE_PAGE);
-    widget = glade_xml_get_widget(setup_glade, "install_directory_label");
+    widget = get_widget("setup_notebook");
+    gtk_notebook_set_current_page(GTK_NOTEBOOK(widget), DONE_PAGE);
+    widget = get_widget("install_directory_label");
     gtk_label_set_text(GTK_LABEL(widget), info->install_path);
 
     check_program_to_start(info);
-    widget = glade_xml_get_widget(setup_glade, "play_game_label");
+    widget = get_widget("play_game_label");
     if ( info->installed_symlink && info->symlinks_path && *info->symlinks_path ) {
         snprintf(text, sizeof(text), _("Type '%s' to start the program"), info->installed_symlink);
     }
@@ -2390,7 +2356,7 @@ static install_state gtkui_complete(install_info *info)
     gtk_label_set_text(GTK_LABEL(widget), text);
 
     /* Hide the play game button if there's no game to play. :) */
-    widget = glade_xml_get_widget(setup_glade, "play_game_button");
+    widget = get_widget("play_game_button");
     if ( widget && 
 		 (!info->installed_symlink || !info->symlinks_path || !*info->symlinks_path ) && ! *info->play_binary) {
         gtk_widget_hide(widget);
@@ -2398,12 +2364,12 @@ static install_state gtkui_complete(install_info *info)
 
     /* Hide the 'View Readme' button if we have no readme... */
     if ( ! GetProductREADME(info, NULL) ) {
-        widget = glade_xml_get_widget(setup_glade, "view_readme_end_button");
+        widget = get_widget("view_readme_end_button");
         if(widget)
             gtk_widget_hide(widget);
     }
 
-    widget = glade_xml_get_widget(setup_glade, "setup_complete_label");
+    widget = get_widget("setup_complete_label");
     if (info->options.reinstalling)
         strcpy(text, _("The update/reinstall was successfully completed!"));
     else
@@ -2419,15 +2385,15 @@ static install_state gtkui_complete(install_info *info)
 static void gtkui_shutdown(install_info *info)
 {
     /* Destroy all windows */
-    GtkWidget *window = glade_xml_get_widget(setup_glade, "setup_window");
+    GtkWidget *window = get_widget("setup_window");
 
     gtk_widget_hide(window);
     if ( setup_glade_readme ) {
-		window = glade_xml_get_widget(setup_glade_readme, "readme_dialog");
+		window = get_widget("readme_dialog");
 		gtk_widget_hide(window);
     }
     if ( setup_glade_license ) {
-		window = glade_xml_get_widget(setup_glade_license, "license_dialog");
+		window = get_widget("license_dialog");
 		gtk_widget_hide(window);
     }
 	/* This seems to work better on GTK2 */

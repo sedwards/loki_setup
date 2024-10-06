@@ -18,7 +18,6 @@
 #include <locale.h>
 
 #include <gtk/gtk.h>
-#include <gladeui/glade.h>
 
 #include "config.h"
 #include "arch.h"
@@ -33,11 +32,7 @@
 #undef PACKAGE
 #define PACKAGE "loki-uninstall"
 
-//#if defined(ENABLE_GTK2)
-    #define CHECK_GLADE "check.gtk2.glade"
-//#else
-//    #define CHECK_GLADE "check.glade"
-//#endif
+    #define CHECK_GLADE "loki_interface.gtk3.ui"
 
 product_t *product = NULL;
 GtkWidget *file_selector;
@@ -358,48 +353,40 @@ void store_filename(GtkButton *but, GtkWidget *entry)
 	}
 }
 
-void
-on_pick_dir_but_clicked (GtkButton       *button,
-						 gpointer         user_data)
+void on_file_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data)
 {
-	//file_selector = gtk_file_selection_new(_("Please select a directory"));
+    if (response_id == GTK_RESPONSE_ACCEPT) {
+        // Retrieve the selected directory
+        char *folder = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+        g_print("Selected folder: %s\n", folder);
+        g_free(folder); // Free the memory allocated for the folder string
+    }
 
-      // Create a file chooser dialog
-      GtkWidget *file_selector = gtk_file_chooser_dialog_new("Select File",
-                                                       parent_window,
-                                                       GTK_FILE_CHOOSER_ACTION_OPEN,
-                                                       "_Cancel", GTK_RESPONSE_CANCEL,
-                                                       "_OK", GTK_RESPONSE_ACCEPT,
-                                                       NULL);
+    // Destroy the dialog after handling the response
+    gtk_widget_destroy(GTK_WIDGET(dialog));
+}
 
-      // Connect signals to handle OK and Cancel responses
-      //  g_signal_connect(file_selector, "response", G_CALLBACK(on_file_dialog_response), data);
-       g_signal_connect(file_selector, "response", G_CALLBACK(gtk_dialog_response), data);
+void on_pick_dir_but_clicked(GtkButton *button, gpointer user_data)
+{
+    // Create a new file chooser dialog for selecting a directory
+    GtkWidget *file_selector = gtk_file_chooser_dialog_new("Please select a directory",
+                                                           GTK_WINDOW(file_selector),
+                                                           GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
+                                                           "_Cancel", GTK_RESPONSE_CANCEL,
+                                                           "_OK", GTK_RESPONSE_ACCEPT,
+                                                           NULL);
 
-       // Show the dialog
-       gtk_widget_show(file_selector);
-#if 0
-	
-	//gtk_signal_connect (GTK_OBJECT (GTK_FILE_SELECTION(file_selector)->ok_button),
-	//					"clicked", GTK_SIGNAL_FUNC (store_filename), NULL);
-	
-	/* Ensure that the dialog box is destroyed when the user clicks a button. */
-	
-	gtk_signal_connect_object (GTK_OBJECT (GTK_FILE_SELECTION(file_selector)->ok_button),
-							   "clicked", GTK_SIGNAL_FUNC (gtk_widget_destroy),
-							   (gpointer) file_selector);
-	
-	gtk_signal_connect_object (GTK_OBJECT (GTK_FILE_SELECTION(file_selector)->cancel_button),
-							   "clicked", GTK_SIGNAL_FUNC (gtk_widget_destroy),
-							   (gpointer) file_selector);
+    // Set the current folder to the user's home directory, or another default path
+    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(file_selector), g_get_home_dir());
 
-	gtk_window_set_transient_for(GTK_WINDOW(file_selector), 
-								 GTK_WINDOW(glade_xml_get_widget(rescue_glade, 
-																 "media_select")));
-#endif	
-	/* Display that dialog */
-	
-	gtk_widget_show (file_selector);
+    // Connect the response signal to handle OK or Cancel
+    g_signal_connect(file_selector, "response", G_CALLBACK(on_file_dialog_response), user_data);
+
+    // Make the file chooser dialog modal
+    gtk_window_set_modal(GTK_WINDOW(file_selector), TRUE);
+
+    // Show the dialog
+    gtk_widget_show(file_selector);
 }
 
 void
