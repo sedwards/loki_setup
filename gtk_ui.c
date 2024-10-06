@@ -1083,19 +1083,19 @@ static yesno_answer gtkui_prompt(const char *txt, yesno_answer suggest)
     /* Ensure that the dialog box is destroyed when the user clicks ok. */
     
     gtk_signal_connect_object ((ok_button), "clicked",
-                               GTK_SIGNAL_FUNC (prompt_okbutton_slot), (dialog));
+                               G_CALLBACK (prompt_okbutton_slot), (dialog));
 
-	gtk_signal_connect_object(GTK_OBJECT(dialog), "delete-event",
-							  GTK_SIGNAL_FUNC(prompt_nobutton_slot), GTK_OBJECT(dialog));
+	gtk_signal_connect_object(G_OBJECT(dialog), "delete-event",
+							  G_CALLBACK(prompt_nobutton_slot), G_OBJECT(dialog));
 
     if (suggest != RESPONSE_OK) {
 		yes_button = gtk_button_new_with_label(_("Yes"));
 		no_button = gtk_button_new_with_label(_("No"));
 
-		gtk_signal_connect_object (GTK_OBJECT (yes_button), "clicked",
-								   GTK_SIGNAL_FUNC (prompt_yesbutton_slot), GTK_OBJECT(dialog));
-		gtk_signal_connect_object (GTK_OBJECT (no_button), "clicked",
-								   GTK_SIGNAL_FUNC (prompt_nobutton_slot), GTK_OBJECT(dialog));
+		gtk_signal_connect_object (G_OBJECT (yes_button), "clicked",
+								   G_CALLBACK (prompt_yesbutton_slot), G_OBJECT(dialog));
+		gtk_signal_connect_object (G_OBJECT (no_button), "clicked",
+								   G_CALLBACK (prompt_nobutton_slot), G_OBJECT(dialog));
 
         gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->action_area),
                            yes_button);
@@ -1149,11 +1149,11 @@ static void message_dialog(const char *txt, const char *title)
 
     /* Ensure that the dialog box is destroyed when the user clicks ok. */
     
-    gtk_signal_connect_object (GTK_OBJECT (ok_button), "clicked",
-                               GTK_SIGNAL_FUNC (prompt_button_slot), GTK_OBJECT(dialog));
+    gtk_signal_connect_object (G_OBJECT (ok_button), "clicked",
+                               G_CALLBACK (prompt_button_slot), G_OBJECT(dialog));
 
-	gtk_signal_connect_object(GTK_OBJECT(dialog), "delete-event",
-							  GTK_SIGNAL_FUNC(prompt_button_slot), GTK_OBJECT(dialog));
+	gtk_signal_connect_object(G_OBJECT(dialog), "delete-event",
+							  G_CALLBACK(prompt_button_slot), G_OBJECT(dialog));
 	gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->action_area),
 					   ok_button);
 
@@ -1882,8 +1882,8 @@ gtk_builder_connect_signals(setup_interface, NULL);
     **  should be installed
     **------------------------------------------------------------------------*/
     symlink_checkbox = get_widget( "symlink_checkbox");
-    gtk_signal_connect(GTK_OBJECT(symlink_checkbox), "toggled",
-			   GTK_SIGNAL_FUNC(on_use_binary_toggled), NULL);
+    gtk_signal_connect(G_OBJECT(symlink_checkbox), "toggled",
+			   G_CALLBACK(on_use_binary_toggled), NULL);
 #endif /*0*/
 
 // Set up the window title

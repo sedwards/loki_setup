@@ -18,6 +18,8 @@
  *                                                                             *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */ 
 
+#define DBG
+#define GTK2
 #include "config.h"
 
 #include <sys/types.h>
@@ -42,13 +44,10 @@ static FILE *fterm = NULL;
 static pid_t pid = 0;
 
 static gint
-exec_su_failed (gpointer user_data)
+ec_su_failed (gpointer user_data)
 {
-#ifdef DEBUG
     printf("static gint exec_su_failed (gpointer user_data)\n");
-#endif
-	gtk_exit (EXIT_ERROR);
-	return FALSE;
+    return FALSE;
 }
 
 typedef void SigFunc(int);
@@ -76,23 +75,15 @@ static SigFunc *Signal(int signo, SigFunc *func)
 
 void sighandler(int sig)
 {
-#ifdef DEBUG
 	fprintf(stderr, "Signal %d received, term = %d.\n", sig, term);
-#endif
 	if ( sig == SIGCHLD && term > 0 ) {
 		int status;
 		pid_t pid;
 		pid = wait(&status);
 		if ( WIFEXITED(status) ) {
-#ifdef DEBUG
 			fprintf(stderr,"Child %d returned\n", pid);
-#endif
-			gtk_exit(WEXITSTATUS(status));
 		} else if ( WIFSIGNALED(status) ) { 
-#ifdef DEBUG
 			fprintf(stderr,"Xsu: subprocess %d has died from signal %d\n", pid, WTERMSIG(status));
-#endif
-			gtk_exit(EXIT_ERROR);
 		}
 		close(term); term = -1;
 		
@@ -142,9 +133,7 @@ int exec_program(const char *prog, char *argv[], pid_t *pid)
 		perror("pty_fork");
 		return -1;
 	default:
-#ifdef DEBUG
 		fprintf(stderr,"Started program %s, fd = %d (%s), PID = %d\n", prog, fd, slavename, child);
-#endif
 		if (pid)
 			*pid = child;
 		break;
@@ -168,9 +157,7 @@ void xsu_perform()
 	fd_set fds;
 	struct timeval delay = { 0, 10*1000 }; /* 10 ms wait */
 
-#ifdef DEBUG
     printf("void xsu_perform()\n");
-#endif
 
 /* 0.2.1 *
 	Minor security fix. Password would remain in memory if we don't
@@ -217,10 +204,10 @@ void xsu_perform()
 
 	if ( term < 0 ) {
 		perror ("Could not exec");
-		gtk_exit (EXIT_ERROR);
+                exit(1);
 	}
 
-	timeout = gtk_timeout_add (SU_DELAY, exec_su_failed, NULL);
+	timeout = g_timeout_add (SU_DELAY, exec_su_failed, NULL);
 	for (;;)
 	{
 		char buf[80], *ptr;
@@ -247,9 +234,7 @@ void xsu_perform()
 		  }
 		} while ( cnt < sizeof(buf));
 		
-#ifdef DEBUG
  		fprintf(stderr,"reading from pty: '%s'\n", buf);
-#endif
 
 		if (strncmp (buf, SU_PWD_OUT, SU_PWD_LEN) == 0)
 		{
@@ -272,9 +257,7 @@ void xsu_perform()
 		FD_SET(term, &fds);
 		if ( select(term+1, &fds, NULL, NULL, &delay) ) {
 		    if ( read(term, &c, 1) <= 0 ) {
-#ifdef DEBUG
 				fprintf(stderr, "'%c'", c);
-#endif				
 				break;
 			}
 		} else
@@ -283,10 +266,7 @@ void xsu_perform()
 
 	fterm = fdopen(term, "w+");
 	setbuf(fterm, NULL);
-
-#ifdef DEBUG
  	fprintf(stderr,"Sending password: '%s'\n", password);
-#endif
 /* 0.2.2 *
 	Minor security fix, clear the password from memory
 */  
@@ -296,9 +276,7 @@ void xsu_perform()
 	/* Clear out all the lines of output, we may want to have an option to show those */
 	while ( !feof(fterm) ) {
 		if ( fgets(line, sizeof(line), fterm) ) {
-#ifdef DEBUG
 			fprintf(stderr,"Read %d chars: %s", strlen(line), line);
-#endif		
 		}
 	}
 	g_free(password);
@@ -308,26 +286,20 @@ void xsu_perform()
 
 void on_gtk_password_textbox_activate (GtkButton *button, gpointer user_data)
 {
-#ifdef DEBUG
     printf("on_gtk_user_textbox_activate (GtkButton *button, gpointer user_data)\n");
-#endif
     xsu_perform();
 }
 
 void on_gtk_user_textbox_activate (GtkButton *button, gpointer user_data)
 {
-#ifdef DEBUG
     printf("on_gtk_user_textbox_activate (GtkButton *button, gpointer user_data)\n");
-#endif
     gtk_widget_grab_focus (gtk_password_textbox);
 }
 
 void on_gtk_command_textbox_activate (GtkButton *button, gpointer user_data)
 {
-#ifdef DEBUG
     printf("on_gtk_command_textbox_activate (GtkButton *button, gpointer user_data)\n");
-#endif
-	if (GTK_WIDGET_VISIBLE(gtk_user_textbox))
+        if (gtk_widget_get_visible(gtk_user_textbox))
 		gtk_widget_grab_focus (gtk_user_textbox);
 	else
 		gtk_widget_grab_focus (gtk_password_textbox);
@@ -335,37 +307,39 @@ void on_gtk_command_textbox_activate (GtkButton *button, gpointer user_data)
 
 void on_gtk_cancel_button_clicked (GtkButton *button, gpointer user_data)
 {
-#ifdef DEBUG
     printf("on_gtk_cancel_button_clicked (GtkButton *button, gpointer user_data)\n");
-#endif
     /* return 3 to tell setup that the user willingly aborted */
-    gtk_exit(3);
 }
 
 
 void on_gtk_ok_button_clicked (GtkButton *button, gpointer user_data)
 {
-
-#ifdef DEBUG
     printf("on_gtk_ok_button_clicked (GtkButton *button, gpointer user_data)\n");
-#endif
     xsu_perform();
-}
-
-GtkWidget* create_gtk_pixmap_d(char *xpm[])
-{
-	GdkPixmap *pixmap;
-	GdkBitmap *bitmap;
-	pixmap = gdk_pixmap_colormap_create_from_xpm_d(NULL, gdk_colormap_get_system(), &bitmap, NULL, xpm);
-	return gtk_pixmap_new(pixmap, bitmap);
 }
 
 GtkWidget* create_gtk_pixmap(const char *file)
 {
-	GdkPixmap *pixmap;
-	GdkBitmap *bitmap;
-	pixmap = gdk_pixmap_colormap_create_from_xpm(NULL, gdk_colormap_get_system(), &bitmap, NULL, file);
-	return gtk_pixmap_new(pixmap, bitmap);
+    GError *error = NULL;
+    GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file(file, &error);
+    if (!pixbuf) {
+        g_print("Error loading XPM file: %s\n", error->message);
+        g_clear_error(&error);
+        return NULL;
+    }
+    
+    return gtk_image_new_from_pixbuf(pixbuf);
+}
+
+GtkWidget* create_gtk_pixmap_d(char *xpm[])
+{
+    GdkPixbuf *pixbuf = gdk_pixbuf_new_from_xpm_data((const char **)xpm);
+    if (!pixbuf) {
+        g_print("Error loading XPM data\n");
+        return NULL;
+    }
+    
+    return gtk_image_new_from_pixbuf(pixbuf);
 }
 
 GtkWidget* create_gtk_xsu_window (void)
@@ -374,7 +348,7 @@ GtkWidget* create_gtk_xsu_window (void)
   tooltips = gtk_tooltips_new ();
   gtk_xsu_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_widget_set_name (gtk_xsu_window, "gtk_xsu_window");
-  gtk_object_set_data (GTK_OBJECT (gtk_xsu_window), "gtk_xsu_window", gtk_xsu_window);
+  gtk_object_set_data (G_OBJECT (gtk_xsu_window), "gtk_xsu_window", gtk_xsu_window);
   if (title_in)
 	gtk_window_set_title (GTK_WINDOW (gtk_xsu_window), arg_title);
   else 
@@ -384,17 +358,25 @@ GtkWidget* create_gtk_xsu_window (void)
   gtk_window_set_policy (GTK_WINDOW (gtk_xsu_window), FALSE, FALSE, FALSE);
   gtk_window_table = gtk_table_new (6, 2, FALSE);
   gtk_widget_set_name (gtk_window_table, "gtk_window_table");
-  gtk_widget_ref (gtk_window_table);
-  gtk_object_set_data_full (GTK_OBJECT (gtk_xsu_window), "gtk_window_table", gtk_window_table,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (gtk_window_table);
+
+  //gtk_object_set_data_full (G_OBJECT (gtk_xsu_window), "gtk_window_table", gtk_window_table,
+  //                          (GtkDestroyNotify) gtk_widget_unref);
+
+  g_object_set_data_full(G_OBJECT(gtk_xsu_window), "gtk_window_table", gtk_window_table, (GDestroyNotify) g_object_unref);
+
+
   gtk_widget_show (gtk_window_table);
   gtk_container_add (GTK_CONTAINER (gtk_xsu_window), gtk_window_table);
 
   gtk_password_label = gtk_label_new (_("Username : "));
   gtk_widget_set_name (gtk_password_label, "gtk_password_label");
-  gtk_widget_ref (gtk_password_label);
-  gtk_object_set_data_full (GTK_OBJECT (gtk_xsu_window), "gtk_password_label", gtk_password_label,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (gtk_password_label);
+
+  //gtk_object_set_data_full (G_OBJECT (gtk_xsu_window), "gtk_password_label", gtk_password_label,
+    //                        (GtkDestroyNotify) gtk_widget_unref);
+  g_object_set_data_full(G_OBJECT(gtk_xsu_window), "gtk_password_table", gtk_window_table, (GDestroyNotify) g_object_unref);
+
   gtk_widget_show (gtk_password_label);
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_password_label, 0, 1, 2, 3,
                     (GtkAttachOptions) (GTK_FILL),
@@ -404,9 +386,13 @@ GtkWidget* create_gtk_xsu_window (void)
 
   gtk_commandtxt_label = gtk_label_new (_("Command :"));
   gtk_widget_set_name (gtk_commandtxt_label, "gtk_commandtxt_label");
-  gtk_widget_ref (gtk_commandtxt_label);
-  gtk_object_set_data_full (GTK_OBJECT (gtk_xsu_window), "gtk_commandtxt_label", gtk_commandtxt_label,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (gtk_commandtxt_label);
+
+  //gtk_object_set_data_full (G_OBJECT (gtk_xsu_window), "gtk_commandtxt_label", gtk_commandtxt_label,
+  //                          (GtkDestroyNotify) gtk_widget_unref);
+  g_object_set_data_full(G_OBJECT(gtk_xsu_window), "gtk_commandtxt_label", gtk_window_table, (GDestroyNotify) g_object_unref);
+
+
   gtk_widget_show (gtk_commandtxt_label);
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_commandtxt_label, 0, 1, 1, 2,
                     (GtkAttachOptions) (GTK_FILL),
@@ -420,9 +406,12 @@ GtkWidget* create_gtk_xsu_window (void)
     gtk_text_label = gtk_label_new (_("This installer requires root privileges.\nPlease enter the correct password for it\nbelow and press [Return] or click OK."));
   
   gtk_widget_set_name (gtk_text_label, "gtk_text_label");
-  gtk_widget_ref (gtk_text_label);
-  gtk_object_set_data_full (GTK_OBJECT (gtk_xsu_window), "gtk_text_label", gtk_text_label,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (gtk_text_label);
+
+  //gtk_object_set_data_full (G_OBJECT (gtk_xsu_window), "gtk_text_label", gtk_text_label,
+  //                          (GtkDestroyNotify) gtk_widget_unref);
+  g_object_set_data_full(G_OBJECT(gtk_xsu_window), "gtk_text_label", gtk_window_table, (GDestroyNotify) g_object_unref);
+
   gtk_widget_show (gtk_text_label);
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_text_label, 1, 2, 0, 1,
                     (GtkAttachOptions) (GTK_FILL),
@@ -434,19 +423,24 @@ GtkWidget* create_gtk_xsu_window (void)
   gtk_keys_pixmap = create_gtk_pixmap_d (keys_xpm);
 
   gtk_widget_set_name (gtk_keys_pixmap, "gtk_keys_pixmap");
-  gtk_widget_ref (gtk_keys_pixmap);
-  gtk_object_set_data_full (GTK_OBJECT (gtk_xsu_window), "gtk_keys_pixmap", gtk_keys_pixmap,
-                            (GtkDestroyNotify) gtk_widget_unref);
-			    
+  g_object_ref (gtk_keys_pixmap);
+  //gtk_object_set_data_full (G_OBJECT (gtk_xsu_window), "gtk_keys_pixmap", gtk_keys_pixmap,
+  //                          (GtkDestroyNotify) gtk_widget_unref);
+  g_object_set_data_full(G_OBJECT(gtk_xsu_window), "gtk_keys_pixmap", gtk_window_table, (GDestroyNotify) g_object_unref);
+
   gtk_widget_show (gtk_keys_pixmap);
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_keys_pixmap, 0, 1, 0, 1,
                     (GtkAttachOptions) (GTK_FILL),
                     (GtkAttachOptions) (GTK_FILL), 0, 0);
   gtk_password_textbox = gtk_entry_new ();
   gtk_widget_set_name (gtk_password_textbox, "gtk_password_textbox");
-  gtk_widget_ref (gtk_password_textbox);
-  gtk_object_set_data_full (GTK_OBJECT (gtk_xsu_window), "gtk_password_textbox", gtk_password_textbox,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (gtk_password_textbox);
+
+  //gtk_object_set_data_full (G_OBJECT (gtk_xsu_window), "gtk_password_textbox", gtk_password_textbox,
+  //                          (GtkDestroyNotify) gtk_widget_unref);
+  g_object_set_data_full(G_OBJECT(gtk_xsu_window), "gtk_password_textbox", gtk_window_table, (GDestroyNotify) g_object_unref);
+
+
   gtk_widget_show (gtk_password_textbox);
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_password_textbox, 1, 2, 3, 4,
                     (GtkAttachOptions) (GTK_EXPAND),
@@ -457,9 +451,12 @@ GtkWidget* create_gtk_xsu_window (void)
 
   gtk_user_textbox = gtk_entry_new ();
   gtk_widget_set_name (gtk_user_textbox, "gtk_user_textbox");
-  gtk_widget_ref (gtk_user_textbox);
-  gtk_object_set_data_full (GTK_OBJECT (gtk_xsu_window), "gtk_user_textbox", gtk_user_textbox,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (gtk_user_textbox);
+
+//  gtk_object_set_data_full (G_OBJECT (gtk_xsu_window), "gtk_user_textbox", gtk_user_textbox,
+//                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_set_data_full(G_OBJECT(gtk_xsu_window), "gtk_user_textbox", gtk_window_table, (GDestroyNotify) g_object_unref);
+
   gtk_widget_show (gtk_user_textbox);
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_user_textbox, 1, 2, 2, 3,
                     (GtkAttachOptions) (0),
@@ -469,9 +466,11 @@ GtkWidget* create_gtk_xsu_window (void)
 
   gtk_command_textbox = gtk_entry_new ();
   gtk_widget_set_name (gtk_command_textbox, "gtk_command_textbox");
-  gtk_widget_ref (gtk_command_textbox);
-  gtk_object_set_data_full (GTK_OBJECT (gtk_xsu_window), "gtk_command_textbox", gtk_command_textbox,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (gtk_command_textbox);
+  //gtk_object_set_data_full (G_OBJECT (gtk_xsu_window), "gtk_command_textbox", gtk_command_textbox,
+  //                          (GtkDestroyNotify) gtk_widget_unref);
+  g_object_set_data_full(G_OBJECT(gtk_xsu_window), "gtk_command_textbox", gtk_window_table, (GDestroyNotify) g_object_unref);
+
   gtk_widget_show (gtk_command_textbox);
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_command_textbox, 1, 2, 1, 2,
                     (GtkAttachOptions) (GTK_EXPAND),
@@ -489,30 +488,49 @@ GtkWidget* create_gtk_xsu_window (void)
 					(GtkAttachOptions) (GTK_FILL),
 					(GtkAttachOptions) (0), 0, 7);
 
-  gtk_utilbox = gtk_hbutton_box_new();
-  gtk_box_pack_start(GTK_BOX(gtk_hbox), gtk_utilbox, FALSE, TRUE, 14);  
-  gtk_button_box_set_layout(GTK_BUTTON_BOX(gtk_utilbox), GTK_BUTTONBOX_DEFAULT_STYLE);
-  gtk_button_box_set_spacing(GTK_BUTTON_BOX(gtk_utilbox), 8);
+  // Create a horizontal box instead of GtkHButtonBox
+  GtkWidget *gtk_utilbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+
+  // Pack the new box into the parent horizontal box
+  gtk_box_pack_start(GTK_BOX(gtk_hbox), gtk_utilbox, FALSE, TRUE, 14);
+
+  // Show the utilbox
   gtk_widget_show(gtk_utilbox);
 
-  gtk_ok_button = gtk_button_new_with_label(_("OK"));
+  // Create the OK button
+  GtkWidget *gtk_ok_button = gtk_button_new_with_label(_("OK"));
   gtk_box_pack_start(GTK_BOX(gtk_utilbox), gtk_ok_button, FALSE, FALSE, 5);
-  GTK_WIDGET_SET_FLAGS(gtk_ok_button, GTK_CAN_DEFAULT);
-  gtk_widget_grab_default(gtk_ok_button);
-  gtk_widget_show (gtk_ok_button);
-  gtk_tooltips_set_tip (tooltips, gtk_ok_button, _("Press this button when finished"), NULL);
 
-  gtk_cancel_button = gtk_button_new_with_label(_("Cancel"));
+  // Set the OK button as the default
+  gtk_widget_set_can_default(gtk_ok_button, TRUE);
+  gtk_widget_grab_default(gtk_ok_button);
+
+  // Show the OK button
+  gtk_widget_show(gtk_ok_button);
+
+  // Set the tooltip for the OK button
+  gtk_widget_set_tooltip_text(gtk_ok_button, _("Press this button when finished"));
+
+  // Create the Cancel button
+  GtkWidget *gtk_cancel_button = gtk_button_new_with_label(_("Cancel"));
   gtk_box_pack_start(GTK_BOX(gtk_utilbox), gtk_cancel_button, FALSE, FALSE, 5);
-  gtk_widget_show (gtk_cancel_button);  
-  GTK_WIDGET_SET_FLAGS(gtk_cancel_button, GTK_CAN_DEFAULT);
-  gtk_tooltips_set_tip (tooltips, gtk_cancel_button, _("Press this button to Cancel"), NULL);
+
+  // Show the Cancel button
+  gtk_widget_show(gtk_cancel_button);
+
+  // Set the Cancel button as a default candidate (though not grabbing default)
+  gtk_widget_set_can_default(gtk_cancel_button, TRUE);
+
+  // Set the tooltip for the Cancel button
+  gtk_widget_set_tooltip_text(gtk_cancel_button, _("Press this button to Cancel"));
 
   gtk_txtuser_label = gtk_label_new (_("Password :"));
   gtk_widget_set_name (gtk_txtuser_label, "gtk_txtuser_label");
-  gtk_widget_ref (gtk_txtuser_label);
-  gtk_object_set_data_full (GTK_OBJECT (gtk_xsu_window), "gtk_txtuser_label", gtk_txtuser_label,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (gtk_txtuser_label);
+  //gtk_object_set_data_full (G_OBJECT (gtk_xsu_window), "gtk_txtuser_label", gtk_txtuser_label,
+  //                          (GtkDestroyNotify) gtk_widget_unref);
+  g_object_set_data_full(G_OBJECT(gtk_xsu_window), "gtk_txtuser_label", gtk_window_table, (GDestroyNotify) g_object_unref);
+
   gtk_widget_show (gtk_txtuser_label);
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_txtuser_label, 0, 1, 3, 4,
                     (GtkAttachOptions) (GTK_FILL),
@@ -522,36 +540,40 @@ GtkWidget* create_gtk_xsu_window (void)
 
   gtk_separator_one = gtk_hseparator_new ();
   gtk_widget_set_name (gtk_separator_one, "gtk_separator_one");
-  gtk_widget_ref (gtk_separator_one);
-  gtk_object_set_data_full (GTK_OBJECT (gtk_xsu_window), "gtk_separator_one", gtk_separator_one,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (gtk_separator_one);
+  g_object_ref (gtk_separator_one);
+
+  //gtk_object_set_data_full (G_OBJECT (gtk_xsu_window), "gtk_separator_one", gtk_separator_one,
+  //                          (GtkDestroyNotify) gtk_widget_unref);
+  g_object_set_data_full(G_OBJECT(gtk_xsu_window), "gtk_separator_one", gtk_window_table, (GDestroyNotify) g_object_unref);
+
+
+  g_widget_show (gtk_separator_one);
   gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_separator_one, 0, 2, 4, 5,
                     (GtkAttachOptions) (GTK_FILL),
                     (GtkAttachOptions) (GTK_FILL), 0, 8);
 
 
-  gtk_signal_connect (GTK_OBJECT (gtk_user_textbox), "activate",
-			GTK_SIGNAL_FUNC (on_gtk_user_textbox_activate), gtk_user_textbox);
+  g_signal_connect (G_OBJECT (gtk_user_textbox), "activate",
+			G_CALLBACK (on_gtk_user_textbox_activate), gtk_user_textbox);
 		      
 		      
-  gtk_signal_connect (GTK_OBJECT (gtk_password_textbox), "activate",
-			GTK_SIGNAL_FUNC (on_gtk_password_textbox_activate), gtk_password_textbox);
+  g_signal_connect (G_OBJECT (gtk_password_textbox), "activate",
+			G_CALLBACK (on_gtk_password_textbox_activate), gtk_password_textbox);
 
 
-  gtk_signal_connect (GTK_OBJECT (gtk_command_textbox), "activate",
-			GTK_SIGNAL_FUNC (on_gtk_command_textbox_activate), gtk_command_textbox);
+  g_signal_connect (G_OBJECT (gtk_command_textbox), "activate",
+			G_CALLBACK (on_gtk_command_textbox_activate), gtk_command_textbox);
 		            
 		      
-  gtk_signal_connect (GTK_OBJECT (gtk_cancel_button), "clicked",
-                      GTK_SIGNAL_FUNC (on_gtk_cancel_button_clicked),
+  g_signal_connect (G_OBJECT (gtk_cancel_button), "clicked",
+                      G_CALLBACK (on_gtk_cancel_button_clicked),
                       NULL);
 
-  gtk_signal_connect (GTK_OBJECT (gtk_ok_button), "clicked",
-                      GTK_SIGNAL_FUNC (on_gtk_ok_button_clicked),
+  g_signal_connect (G_OBJECT (gtk_ok_button), "clicked",
+                      G_CALLBACK (on_gtk_ok_button_clicked),
                       NULL);
 
-  gtk_object_set_data (GTK_OBJECT (gtk_xsu_window), "tooltips", tooltips);
+  g_object_set_data (G_OBJECT (gtk_xsu_window), "tooltips", tooltips);
 
   return gtk_xsu_window;
 }
@@ -789,9 +811,12 @@ int main (int argc, char *argv[])
 		gtk_keys_pixmap = create_gtk_pixmap(arg_iconfile);
 
 		gtk_widget_set_name (gtk_keys_pixmap, "gtk_keys_pixmap");
-		gtk_widget_ref (gtk_keys_pixmap);
-		gtk_object_set_data_full (GTK_OBJECT (gtk_xsu_window), "gtk_keys_pixmap", gtk_keys_pixmap,
-					(GtkDestroyNotify) gtk_widget_unref);			    
+		g_object_ref (gtk_keys_pixmap);
+
+		//gtk_object_set_data_full (G_OBJECT (gtk_xsu_window), "gtk_keys_pixmap", gtk_keys_pixmap,
+		//			(GtkDestroyNotify) gtk_widget_unref);
+		g_object_set_data_full(G_OBJECT(gtk_xsu_window), "gtk_keys_pixmap", gtk_window_table, (GDestroyNotify) g_object_unref);
+
 		gtk_widget_show (gtk_keys_pixmap);
 		gtk_table_attach (GTK_TABLE (gtk_window_table), gtk_keys_pixmap, 0, 1, 0, 1,
 					(GtkAttachOptions) (GTK_FILL),

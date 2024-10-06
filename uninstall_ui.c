@@ -44,7 +44,7 @@ void gtk_button_set_sensitive(GtkWidget *button, gboolean sensitive)
                 crossing.type = GDK_ENTER_NOTIFY;
                 crossing.window = button->window;
                 crossing.detail = GDK_NOTIFY_VIRTUAL;
-                gtk_signal_emit_by_name(GTK_OBJECT(button),
+                gtk_signal_emit_by_name(G_OBJECT(button),
                                         "enter_notify_event",
                                         &crossing, &retval);
         }
@@ -77,22 +77,22 @@ static int display_message(const char *txt, int buttons)
     label = gtk_label_new (txt);
 	if ( buttons & BUTTON_OK ) {
 		ok_button = gtk_button_new_with_label(_("OK"));
-		gtk_signal_connect_object (GTK_OBJECT (ok_button), "clicked",
-								   GTK_SIGNAL_FUNC (prompt_okbutton_slot), GTK_OBJECT(dialog));
+		gtk_signal_connect_object (G_OBJECT (ok_button), "clicked",
+								   G_CALLBACK (prompt_okbutton_slot), G_OBJECT(dialog));
 		gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->action_area),
 						   ok_button);
 	}
 	if ( buttons & BUTTON_ABORT ) {
 		abort_button = gtk_button_new_with_label(_("Abort"));
-		gtk_signal_connect_object (GTK_OBJECT (abort_button), "clicked",
-								   GTK_SIGNAL_FUNC (prompt_nobutton_slot), GTK_OBJECT(dialog));
+		gtk_signal_connect_object (G_OBJECT (abort_button), "clicked",
+								   G_CALLBACK (prompt_nobutton_slot), G_OBJECT(dialog));
 		gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->action_area),
 						   abort_button);
 	}
     /* Ensure that the dialog box is destroyed when the user clicks ok. */
     
-	gtk_signal_connect_object(GTK_OBJECT(dialog), "delete-event",
-							  GTK_SIGNAL_FUNC(prompt_nobutton_slot), GTK_OBJECT(dialog));
+	gtk_signal_connect_object(G_OBJECT(dialog), "delete-event",
+							  G_CALLBACK(prompt_nobutton_slot), G_OBJECT(dialog));
     
     /* Add the label, and show everything we've added to the dialog. */
     
@@ -222,7 +222,7 @@ static size_t calculate_recovered_space(void)
         while ( clist ) {
             button = GTK_WIDGET(clist->data);
             if ( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)) ) {
-                component = gtk_object_get_data(GTK_OBJECT(button), "data");
+                component = gtk_object_get_data(G_OBJECT(button), "data");
                 size += component->size / 1024;
                 ready = TRUE;
             }
@@ -315,7 +315,7 @@ void perform_uninstall_slot(GtkWidget* w, gpointer data)
         while ( clist && ! uninstall_cancelled ) {
             button = GTK_WIDGET(clist->data);
             if ( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)) ) {
-                component = gtk_object_get_data(GTK_OBJECT(button), "data");
+                component = gtk_object_get_data(G_OBJECT(button), "data");
                 if ( loki_isdefault_component(component->component) ) {
                     clist = clist->next;
                     continue;
@@ -369,7 +369,7 @@ void perform_uninstall_slot(GtkWidget* w, gpointer data)
         while ( clist && ! uninstall_cancelled ) {
             button = GTK_WIDGET(clist->data);
             if ( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)) ) {
-                component = gtk_object_get_data(GTK_OBJECT(button), "data");
+                component = gtk_object_get_data(G_OBJECT(button), "data");
                 if ( ! loki_isdefault_component(component->component) ) {
                     clist = clist->next;
                     continue;
@@ -572,10 +572,10 @@ int uninstall_ui(int argc, char *argv[])
             strncpy(text, _("Complete uninstall"), sizeof(text));
             button = gtk_check_button_new_with_label(text);
             gtk_box_pack_start(GTK_BOX(vbox), button, FALSE, FALSE, 0);
-            gtk_signal_connect(GTK_OBJECT(button), "toggled",
-                               GTK_SIGNAL_FUNC(component_toggled_slot),
+            gtk_signal_connect(G_OBJECT(button), "toggled",
+                               G_CALLBACK(component_toggled_slot),
                                (gpointer)component_list);
-            gtk_object_set_data(GTK_OBJECT(button), "data",
+            gtk_object_set_data(G_OBJECT(button), "data",
                                 (gpointer)component_list);
             gtk_widget_show(button);
         }
@@ -590,10 +590,10 @@ int uninstall_ui(int argc, char *argv[])
             strncpy(text, loki_getname_component(component), sizeof(text));
             button = gtk_check_button_new_with_label(text);
             gtk_box_pack_start(GTK_BOX(vbox), button, FALSE, FALSE, 0);
-            gtk_signal_connect(GTK_OBJECT(button), "toggled",
-                               GTK_SIGNAL_FUNC(component_toggled_slot),
+            gtk_signal_connect(G_OBJECT(button), "toggled",
+                               G_CALLBACK(component_toggled_slot),
                                (gpointer)addon_list);
-            gtk_object_set_data(GTK_OBJECT(button), "data",
+            gtk_object_set_data(G_OBJECT(button), "data",
                                 (gpointer)addon_list);
             gtk_widget_show(button);
             add_component_list(component_list, button);

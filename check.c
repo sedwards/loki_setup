@@ -157,11 +157,11 @@ static void message_dialog(const char *txt, const char *title)
     
     /* Ensure that the dialog box is destroyed when the user clicks ok. */
     
-    gtk_signal_connect_object (GTK_OBJECT (ok_button), "clicked",
-                               GTK_SIGNAL_FUNC (prompt_button_slot), GTK_OBJECT(dialog));
+    gtk_signal_connect_object (G_OBJECT (ok_button), "clicked",
+                               G_CALLBACK (prompt_button_slot), G_OBJECT(dialog));
 
-	gtk_signal_connect_object(GTK_OBJECT(dialog), "delete-event",
-							  GTK_SIGNAL_FUNC(prompt_button_slot), GTK_OBJECT(dialog));
+	gtk_signal_connect_object(G_OBJECT(dialog), "delete-event",
+							  G_CALLBACK(prompt_button_slot), G_OBJECT(dialog));
 	//gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->action_area), ok_button);
 
         gtk_dialog_add_button(GTK_DIALOG(dialog), "_OK", GTK_RESPONSE_OK);

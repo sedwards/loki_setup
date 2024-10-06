@@ -58,7 +58,7 @@ GtkWidget *gtk_utilbox;
 */
 GtkWidget *gtk_user_textbox;
 GtkWidget *gtk_password_textbox;
-GtkTooltips *tooltips;
+GtkTooltip *tooltips;
 
 gchar *arg_message, *arg_title, *displ_host, *su_command = NULL;
 
