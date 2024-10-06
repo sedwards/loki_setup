@@ -452,7 +452,7 @@ if test x$enable_gtk2 = xyes; then
 	    dnl Ignore unnecessary dependency on libpng12, not used by our binaries, creates problems with newer distros
 	    GTK2_LIBS=`echo $GTK2_LIBS | sed "s/-lpng12//g"`
             GUI_LIBS="$GUI_LIBS $GTK2_LIBS"
-			SETUP_GTK="setup.gtk2"
+			SETUP_GTK="setup.gtk"
 			GTK_SUBDIR=gtk2
 			XMLVER="2"
         else
@@ -466,6 +466,46 @@ else
     CFLAGS="$CFLAGS $GLADE_CFLAGS $GTK_CFLAGS"
     GUI_LIBS="$GUI_LIBS $GLADE_STATIC -L$GLADE_PREFIX/lib$LIBSUFFIX -lglade $BDYNAMIC $GTK_LIBS"
 fi
+
+AC_ARG_ENABLE(gtk3,
+[  --enable-gtk3            Use gtk3 support [default=yes]],
+              , enable_gtk3=yes)
+if test x$enable_gtk3 = xyes; then
+
+    AC_DEFINE(ENABLE_gtk3, 1, gtk3 support.)
+
+    dnl Check for glade2 and gtk3 libraries
+
+    AC_PATH_PROG(HAVEPKGCONFIG, pkg-config, $PATH)
+
+    if test ! -z "$HAVEPKGCONFIG"; then
+        if $HAVEPKGCONFIG --cflags --libs gtk+-3.0 gladeui-2.0 ; then
+            gtk3_CFLAGS=`$HAVEPKGCONFIG --cflags gtk+-3.0`
+            gladeui2_CFLAGS=`$HAVEPKGCONFIG --cflags gladeui-2.0`
+            gtk3_LIBS=`$HAVEPKGCONFIG --libs gtk+-3.0`
+            gladeui2_LIBS=`$HAVEPKGCONFIG --libs gladeui-2.0`
+
+            dnl Pkg-config is supposed to add the export-dynamic, but it doesn't, at least on my system
+            CFLAGS="$CFLAGS $gtk3_CFLAGS $gladeui2_CFLAGS"
+            if test ! -z "GLADE_STATIC"  ; then
+                gtk3_LIBS=`echo $gtk3_LIBS $gladeui2_LIBS | sed "s/-lglade-2.0/opt\/homebrew\/lib\/libgladeui-2.13.dylib /g"`
+            fi
+            GUI_LIBS="$GUI_LIBS $gtk3_LIBS"
+                        SETUP_GTK="setup.gtk3"
+                        GTK_SUBDIR=gtk3
+                        XMLVER="2"
+        else
+            AC_MSG_ERROR([*** Either libglade-2.0 or gtk+-3.0 are not available.])
+        fi
+    else
+        AC_MSG_ERROR([*** pkg-config not found. Cannot probe for libglade-2.0 or gtk+-3.0.])
+    fi
+
+else
+    CFLAGS="$CFLAGS $GLADE_CFLAGS $GTK_CFLAGS"
+    GUI_LIBS="$GUI_LIBS $GLADE_STATIC -L$GLADE_PREFIX/lib$LIBSUFFIX -lglade $BDYNAMIC $GTK_LIBS"
+fi
+
 
 dnl Look for the XML libraries
 

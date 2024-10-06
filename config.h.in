@@ -21,6 +21,9 @@
 /* ZIP support. */
 #undef ENABLE_ZIP
 
+/* gtk3 support. */
+#undef ENABLE_gtk3
+
 /* libbz2 support. */
 #undef HAVE_BZIP2_SUPPORT
 

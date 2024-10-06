@@ -18,7 +18,7 @@
 #include <locale.h>
 
 #include <gtk/gtk.h>
-#include <glade/glade.h>
+#include <gladeui/glade.h>
 
 #include "config.h"
 #include "arch.h"
@@ -33,15 +33,16 @@
 #undef PACKAGE
 #define PACKAGE "loki-uninstall"
 
-#if defined(ENABLE_GTK2)
+//#if defined(ENABLE_GTK2)
     #define CHECK_GLADE "check.gtk2.glade"
-#else
-    #define CHECK_GLADE "check.glade"
-#endif
+//#else
+//    #define CHECK_GLADE "check.glade"
+//#endif
 
 product_t *product = NULL;
 GtkWidget *file_selector;
-GladeXML *check_glade, *rescue_glade = NULL;
+GtkBuilder *check_glade = NULL;
+GtkBuilder *rescue_glade = NULL;
 extern struct component_elem *current_component;
 
 #ifdef __linux
@@ -166,13 +167,20 @@ static void message_dialog(const char *txt, const char *title)
 
 	gtk_signal_connect_object(GTK_OBJECT(dialog), "delete-event",
 							  GTK_SIGNAL_FUNC(prompt_button_slot), GTK_OBJECT(dialog));
-	gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->action_area),
-					   ok_button);
+	//gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->action_area), ok_button);
+
+        gtk_dialog_add_button(GTK_DIALOG(dialog), "_OK", GTK_RESPONSE_OK);
+
 
     /* Add the label, and show everything we've added to the dialog. */
     
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox),
-                       label);
+    //gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox),
+      //                 label);
+
+   GtkWidget *content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+   gtk_container_add(GTK_CONTAINER(content_area), label);
+
+
     gtk_window_set_title(GTK_WINDOW(dialog), title);
     gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
     gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
@@ -242,6 +250,7 @@ on_media_ok_clicked (GtkButton       *button,
 					 gpointer         user_data)
 {
 	GtkWidget *diag = glade_xml_get_widget(check_glade, "diagnostic_label"), *radio;
+        //GtkWidget *diag = GTK_WIDGET(gtk_builder_get_object(check_glade, "diagnostic_label"), *radio);
 	char path[PATH_MAX], root[PATH_MAX];
 	install_info *install;
 	
@@ -353,10 +362,26 @@ void
 on_pick_dir_but_clicked (GtkButton       *button,
 						 gpointer         user_data)
 {
-	file_selector = gtk_file_selection_new(_("Please select a directory"));
+	//file_selector = gtk_file_selection_new(_("Please select a directory"));
+
+      // Create a file chooser dialog
+      GtkWidget *file_selector = gtk_file_chooser_dialog_new("Select File",
+                                                       parent_window,
+                                                       GTK_FILE_CHOOSER_ACTION_OPEN,
+                                                       "_Cancel", GTK_RESPONSE_CANCEL,
+                                                       "_OK", GTK_RESPONSE_ACCEPT,
+                                                       NULL);
+
+      // Connect signals to handle OK and Cancel responses
+      //  g_signal_connect(file_selector, "response", G_CALLBACK(on_file_dialog_response), data);
+       g_signal_connect(file_selector, "response", G_CALLBACK(gtk_dialog_response), data);
+
+       // Show the dialog
+       gtk_widget_show(file_selector);
+#if 0
 	
-	gtk_signal_connect (GTK_OBJECT (GTK_FILE_SELECTION(file_selector)->ok_button),
-						"clicked", GTK_SIGNAL_FUNC (store_filename), NULL);
+	//gtk_signal_connect (GTK_OBJECT (GTK_FILE_SELECTION(file_selector)->ok_button),
+	//					"clicked", GTK_SIGNAL_FUNC (store_filename), NULL);
 	
 	/* Ensure that the dialog box is destroyed when the user clicks a button. */
 	
@@ -371,7 +396,7 @@ on_pick_dir_but_clicked (GtkButton       *button,
 	gtk_window_set_transient_for(GTK_WINDOW(file_selector), 
 								 GTK_WINDOW(glade_xml_get_widget(rescue_glade, 
 																 "media_select")));
-	
+#endif	
 	/* Display that dialog */
 	
 	gtk_widget_show (file_selector);
