@@ -370,7 +370,8 @@ void on_pick_dir_but_clicked(GtkButton *button, gpointer user_data)
 {
     // Create a new file chooser dialog for selecting a directory
     GtkWidget *file_selector = gtk_file_chooser_dialog_new("Please select a directory",
-                                                           GTK_WINDOW(file_selector),
+                                                           //GTK_WINDOW(file_selector),
+                                                           file_selector,
                                                            GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
                                                            "_Cancel", GTK_RESPONSE_CANCEL,
                                                            "_OK", GTK_RESPONSE_ACCEPT,
@@ -389,20 +390,24 @@ void on_pick_dir_but_clicked(GtkButton *button, gpointer user_data)
     gtk_widget_show(file_selector);
 }
 
-void
-on_rescue_button_clicked            (GtkButton       *button,
-									 gpointer         user_data)
+
+void on_rescue_button_clicked(GtkButton *button, gpointer user_data)
 {
-	GtkWidget *window;
+    GtkWidget *window;
 
-    rescue_glade = GLADE_XML_NEW(CHECK_GLADE, "media_select"); 
-    glade_xml_signal_autoconnect(rescue_glade);
+    // Load the UI using GtkBuilder instead of Glade
+    rescue_glade = gtk_builder_new();
+    gtk_builder_add_from_file(rescue_glade, CHECK_GLADE, NULL);
+    gtk_builder_connect_signals(rescue_glade, NULL);
 
-	/* Ask the user to insert the media */
-    window = gtk_builder_get_object(rescue_glade, "media_select");
-	on_cdrom_radio_toggled(NULL, NULL);
+    // Ask the user to insert the media
+    window = GTK_WIDGET(gtk_builder_get_object(rescue_glade, "media_select"));
+    
+    // Trigger the toggle action
+    on_cdrom_radio_toggled(NULL, NULL);
 
-	gtk_widget_show(window);
+    // Show the window
+    gtk_widget_show(window);
 }
 
 void
