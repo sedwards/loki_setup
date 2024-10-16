@@ -2,8 +2,6 @@
 *~
 *.a
 .depend
-configure
-Makefile
 autom4te.cache
 config.h
 config.log
@@ -17,3 +15,15 @@ loki_uninstall
 uninstall
 unrar/unrar
 dialog/dialog-main
+ABOUT-NLS
+ChangeLog
+config.rpath
+po/Makefile.in.in
+po/Rules-quot
+po/boldquot.sed
+po/en@boldquot.header
+po/en@quot.header
+po/quot.sed
+po/remove-potcdate.sin
+po/insert-header.sin
+

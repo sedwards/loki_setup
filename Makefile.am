@@ -320,3 +320,7 @@ depend:
 ifeq ($(wildcard .depend),.depend)
 include .depend
 endif
+
+ACLOCAL_AMFLAGS = -I m4
+
+EXTRA_DIST = m4/ChangeLog

@@ -1,5 +1,6 @@
 AC_INIT
 AC_CONFIG_HEADERS([config.h])
+AM_GNU_GETTEXT([external])
 
 dnl Define the release numbers here
 

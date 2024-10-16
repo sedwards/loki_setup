@@ -1,0 +1,10 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/Users/sedwards/source/loki_setup",
+            "binaryPath": "/Users/sedwards/source/loki_setup/setup.gtk3",
+            "binaryArgs": []
+        }
+    ],
+    "makefile.buildLog": "dry-run.log"
+}

@@ -775,7 +775,7 @@ AC_SUBST(LD)
 AC_SUBST(SETUP_GTK)
 AC_SUBST(GTK_SUBDIR)
 
-AC_CONFIG_FILES([Makefile plugins/Makefile dialog/Makefile])
+AC_CONFIG_FILES([Makefile plugins/Makefile dialog/Makefile po/Makefile.in])
 AC_OUTPUT
 
 
