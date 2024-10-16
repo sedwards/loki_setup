@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="yes"?>
+<install product="RT2" desc="Railroad Tycoon II" version="1.54" uninstall="uninstall.sh" binarypath="/usr/bin" promptbinaries="yes" update_url="http://www.lokigames.com/updates/" express="yes" checked="true">
+  <readme checked="true">
+    README
+  </readme>
+  <eula checked="true">
+   license.txt
+  </eula>
+
+  <bool name="unix" if="!|(Linux,FreeBSD)" checked="true"/>
+  <bool name="has-passwd" script="test -f /etc/passwd" later="yes" checked="true"/>
+  <bool name="env-test" env="TEST_VALUE" checked="true"/>
+  <component name="Default" version="1.54" default="yes" checked="true">
+   <option install="true" required="false">
+    Base Install
+    <lang lang="fr" checked="true">Installation de base</lang>
+    <lang lang="it" checked="true">Installazione base</lang>
+    <lang lang="de" checked="true">Minimale Installation</lang>
+    <help checked="true">Required for play</help>
+    <help lang="fr" checked="true">Requis pour jouer</help>
+    <help lang="es" checked="true">Se necesita para jugar</help>
+    <help lang="it" checked="true">È necessaria per giocare</help>
+    <help lang="de" checked="true">Zum Spielen benötigt</help>
+
+    <binary arch="any" libc="any" symlink="rt2" icon="icon.xpm" play="yes" checked="true">
+      rt2
+    </binary>
+    <files checked="true">
+      test.tar
+      main.tar.gz
+      icon.xpm
+      icon.bmp
+      splash.bmp
+      Manual
+      maps.tar.gz
+    </files>
+    <exclusive checked="true">
+	  <option tag="x86">
+    	x86 binaries
+	  </option>
+	  <option tag="ppc">
+	   PPC binaries
+	  </option>
+    </exclusive>
+   </option>
+   <option if="+(+(x86,Linux),has-passwd,!false)">
+    Classic Campaign (can run from CD)
+    <warn checked="true">Don't touch that
+    or you may hurt yourself
+    </warn>
+    <files cdrom="yes" checked="true">
+      maps/#[01]*
+    </files>
+    <option tag="movies">
+      Classic Campaign Movies (can run from CD)
+      <eula checked="true">license.txt</eula>
+      <files checked="true">
+        anim/cv[01]*
+        anim/cvwin.mjpg
+      </files>
+    </option>
+   </option>
+  </component>
+  <component name="Second Century" version="1.0" showname="yes" checked="true">
+   <option>
+    Second Century Campaign (can run from CD)
+    <files checked="true">
+      maps/#e[01]*
+    </files>
+    <option>
+      Second Century Campaign Movies (can run from CD)
+      <files checked="true">
+        anim/cve[01]*
+        anim/cvewin.mjpg
+      </files>
+    </option>
+   </option>
+  </component>
+</install>
