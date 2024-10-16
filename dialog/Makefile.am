@@ -1,0 +1,76 @@
+# $Id: Makefile.in,v 1.6 2008-07-25 22:56:53 megastep Exp $
+# template makefile for DIALOG
+#
+SHELL		= /bin/sh
+
+VERSION		= $(shell cat VERSION)
+
+CFLAGS		= @CFLAGS@ -DHAVE_COLOR -I. -I..
+CPPFLAGS	= @CPPFLAGS@ @DEFS@ -DLOCALEDIR=\"locale\" -DVERSION=\"$(VERSION)\"
+CC		= @CC@
+LDFLAGS		= @LDFLAGS@
+LIBS		= @LIBS@
+RANLIB		= @RANLIB@
+AR		= @AR@
+
+RM		= rm -f
+LINT		= lint
+
+#
+# Standard .c to .o compile line.
+#
+.c.o :
+	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) $(CPPFLAGS) -c $<
+
+OBJS = 	arrows.o \
+	buttons.o \
+	checklist.o \
+	inputbox.o \
+	inputstr.o \
+	menubox.o \
+	mouse.o \
+	mousewget.o \
+	msgbox.o \
+	textbox.o \
+	ui_getc.o \
+	util.o \
+	gauge.o \
+	fselect.o \
+	timebox.o \
+	yesno.o
+
+SRCS = $(OBJS:.o=.c)
+HDRS = \
+	colors.h \
+	dialog.h
+
+LIB	= libdialog.a
+ALL	= $(LIB) $(PROG)
+
+all	:: $(ALL)
+
+dialog.o $(OBJS) : dialog.h
+
+$(LIB) : $(OBJS)
+	$(AR) crv $(LIB) $(OBJS)
+	$(RANLIB) $@
+
+clean:
+	rm -f core *.o *~ tags TAGS $(ALL)
+
+tags:
+	ctags $(SRCS) $(HDRS)
+
+TAGS:
+	etags $(SRCS) $(HDRS)
+
+lint:
+	$(LINT) $(CPPFLAGS) *.c
+
+
+depend:
+	$(CC) -MM $(CFLAGS) $(SRCS) > .depend
+
+ifeq ($(wildcard .depend),.depend)
+include .depend
+endif
