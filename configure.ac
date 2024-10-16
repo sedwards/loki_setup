@@ -1,6 +1,8 @@
-AC_INIT
-AC_CONFIG_HEADERS([config.h])
-AM_GNU_GETTEXT([external])
+#AC_INIT[setup, 1.6.5]
+AC_INIT([setup],[1.6.5   #  configure.ac - loki_setup 
+AC_CONFIG_HEADERS(config.h)
+AM_GNU_GETTEXT(external)
+AM_INIT_AUTOMAKEforeign])
 
 dnl Define the release numbers here
 
