@@ -4,6 +4,17 @@ AC_CONFIG_HEADERS(config.h)
 AM_GNU_GETTEXT(external)
 AM_INIT_AUTOMAKEforeign])
 
+# Check for required libraries
+PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.30])
+PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.0])
+#PKG_CHECK_MODULES([XML], [xml])
+
+AC_SUBST([GTK_CFLAGS])
+AC_SUBST([GTK_LIBS])
+
+# Libtool conversion
+#AC_ENABLE_SHARED([])
+
 dnl Define the release numbers here
 
 SETUP_VERSION_MAJOR=1
