@@ -4,16 +4,7 @@ AC_CONFIG_HEADERS(config.h)
 AM_GNU_GETTEXT(external)
 AM_INIT_AUTOMAKEforeign])
 
-# Check for required libraries
-PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.30])
-PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.0])
-#PKG_CHECK_MODULES([XML], [xml])
 
-AC_SUBST([GTK_CFLAGS])
-AC_SUBST([GTK_LIBS])
-
-# Libtool conversion
-#AC_ENABLE_SHARED([])
 
 dnl Define the release numbers here
 
@@ -36,6 +27,79 @@ AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 
 AC_PATH_PROGS(AR, [ar gar])
+
+
+# Check for required libraries
+PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.30])
+PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.0])
+#PKG_CHECK_MODULES([XML], [xml])
+
+AC_SUBST([GTK_CFLAGS])
+AC_SUBST([GTK_LIBS])
+
+
+AC_ARG_ENABLE(debug,
+[  --enable-debug            enable debugging  [default=no]],
+              , enable_debug=no)
+if test x$enable_debug = xyes; then
+    CFLAGS="$CFLAGS -g -O0"
+    AC_DEFINE(DEBUG, 1, Debugging enabled.)
+fi
+
+AC_ARG_ENABLE(gtk3,
+              [  --enable-gtk3           Enable GTK+ 3.0 (Experimental)],
+              enable_gtk3=$enableval,
+              enable_gtk3="yes")
+
+
+AC_ARG_ENABLE(gtk4,
+              [  --enable-gtk4           Enable GTK+ 4.0 (Experimental)],
+              enable_gtk4=$enableval,
+              enable_gtk4="no")
+
+AC_ARG_WITH(libxml2,
+              [  --with-libxml2          use libxml2 [default=libxml1 unless GTK2 is enabled]],
+              with_libxml2="yes") 
+
+
+# Libtool conversion
+#AC_ENABLE_SHARED([])
+
+
+dnl *** Look for the XML libraries
+AC_PATH_PROG(HAVEXML, xml${XMLVER}-config, $PATH)
+if test ! -z "$HAVEXML"; then
+    XML_CFLAGS=`$HAVEXML --cflags`
+    XML_PREFIX=`$HAVEXML --prefix`
+
+        if "$HAVEXML" --help|grep libtool-libs > /dev/null; then
+                XML_LIBTOOL=`$HAVEXML --libtool-libs`
+                if test -f "$XML_LIBTOOL"; then
+                        . "$XML_LIBTOOL"
+                        XML_LIBS="$dependency_libs"
+                else
+                        XML_LIBS="-lm"
+                fi
+        elif "$HAVEXML" --libs | grep thread > /dev/null; then
+                XML_LIBS="$PTHREAD -lm"
+        fi
+
+    CFLAGS="$CFLAGS $XML_CFLAGS"
+    if test "$STATIC" = ""; then
+        LIBS="$LIBS $XML_STATIC -L$XML_PREFIX/lib$LIBSUFFIX -lxml${XMLVER} $BDYNAMIC $XML_LIBS"
+        GUI_LIBS="$GUI_LIBS $XML_STATIC -L$XML_PREFIX/lib$LIBSUFFIX -lxml${XMLVER} $BDYNAMIC $XML_LIBS"
+        CARBON_LIBS="$CARBON_LIBS -L$XML_PREFIX/lib$LIBSUFFIX -lxml${XMLVER} $XML_LIBS"
+    else
+        LIBS="$LIBS -l${XMLVER} $XML_LIBS"
+        GUI_LIBS="$GUI_LIBS -l${XMLVER} $XML_LIBS"
+        CARBON_LIBS="$CARBON_LIBS -l${XMLVER} $XML_LIBS"
+    fi
+else
+    AC_MSG_ERROR([*** xml${XMLVER}-config not found. You need a working libxml${XMLVER} installation.])
+fi
+
+
+
 
 AC_PATH_XTRA
 AC_CHECK_HEADERS(unistd.h)
@@ -85,16 +149,11 @@ AC_PATH_PROG(BRANDELF, brandelf, true)
 LD="$CC"
 CFLAGS="-fsigned-char -funroll-loops -Wall -g -O2 -I. $X_CFLAGS"
 CONSOLE_LIBS=""
-if test -d /usr/codehost/lib; then
-	LIBS="-L/usr/codehost/lib"
-elif test -d /opt/codehost/lib; then
-	LIBS="-L/opt/codehost/lib"
-else
-	LIBS="$LIBS -L/usr/local/lib"
-fi
+
+LIBS="$LIBS -L/opt/homebrew/lib"
 
 SETUP_GTK=setup.gtk
-GTK_SUBDIR=gtk1
+GTK_SUBDIR=gtk3
 
 # Build some static binaries by default when possible
 STATIC="-static"
@@ -332,10 +391,9 @@ AC_CHECK_LIB(dl, dlopen, USE_LIBDL=yes)
 
 AC_ARG_ENABLE(bzip2,
 [  --enable-bzip2            enable bzip2 support  [default=no]],
-              , enable_bzip2=no)
+              , enable_bzip2=yes)
 if test x$enable_bzip2 = xyes; then
-
-  HAVE_BZIP2_SUPPORT="no"
+HAVE_BZIP2_SUPPORT="no"
 
   AC_CHECK_LIB(bz2, BZ2_bzopen, HAVE_BZ2_BZOPEN=yes)
   AC_CHECK_LIB(bz2, bzopen, HAVE_NORMAL_BZOPEN=yes)
@@ -345,7 +403,7 @@ if test x$enable_bzip2 = xyes; then
     HAVE_BZIP2_SUPPORT="yes"
   fi
 
-  dnl favor the BZ2_ prefix version, since it's a later revision of the lib.
+dnl favor the BZ2_ prefix version, since it's a later revision of the lib.
   if test x$HAVE_BZ2_BZOPEN = xyes; then
     LIBBZ2_PREFIX="yes"
     HAVE_BZIP2_SUPPORT="yes"
@@ -360,25 +418,6 @@ elif test x$enable_bzip2 = xdlopen; then
   BZIP2_DLOPEN="yes"
 fi
 
-dnl Detect the LibC version
-AC_MSG_CHECKING(libc version)
-if test `uname -s` != Linux; then
-    LIBC=glibc-2.1
-else
-      if test -f `echo /lib/libc.so.6* | tail -n 1`; then
-dnl This should cover all other releases post 2.1
-              if grep GLIBC_2.1 /lib/libc.so.6* 2>&1 >/dev/null; then
-                      LIBC="glibc-2.1"
-              else
-                      LIBC="glibc-2.0"
-              fi        
-      elif [ -f /lib/libc.so.5 ]; then
-              LIBC="libc5"
-      else
-              LIBC="unknown"
-      fi
-fi
-AC_MSG_RESULT($LIBC)
 
 PLUGINS="tar.c"
 
@@ -390,15 +429,15 @@ AC_ARG_WITH(ncurses,
 )	
 
 AC_ARG_ENABLE(libglade-static,
-[  --enable-libglade-static            whether to statically link libglade (default=yes)],,
-enable_libglade_static=yes)
+[  --enable-libglade-static            whether to statically link libglade (default=no)],,
+enable_libglade_static=no)
 if test "x$enable_libglade_static" = "xyes"; then
 	GLADE_STATIC="$BSTATIC"
 fi
 
 AC_ARG_ENABLE(libxml-static,
-[  --enable-libxml-static            whether to statically link libxml (default=yes)],,
-enable_libxml_static=yes)
+[  --enable-libxml-static            whether to statically link libxml (default=no)],,
+enable_libxml_static=no)
 if test "x$enable_libxml_static" = "xyes"; then
 	XML_STATIC="$BSTATIC"
 fi
@@ -417,69 +456,9 @@ AC_CHECK_LIB(ncurses, keypad, USE_NCURSES=yes)
 
 dnl Check for libglade 1
 
-AC_PATH_PROG(HAVEGLADE, libglade-config, $PATH)
-if test ! -z "$HAVEGLADE"; then
-    GLADE_CFLAGS=`$HAVEGLADE --cflags`
-    GLADE_PREFIX=`$HAVEGLADE --prefix`
-
-else
-    AC_MSG_ERROR([*** libglade-config not found. You need a working libglade installation.])
-fi
-
-dnl Check for GTK 1.X
-AC_PATH_PROG(HAVEGTK, gtk$GTK12-config, $PATH)
-AC_PATH_PROG(HAVEGLIB, glib$GTK12-config, $PATH)
-if test ! -z "$HAVEGTK"; then
-    GTK_CFLAGS=`$HAVEGTK --cflags`
-    GTK_PREFIX=`$HAVEGTK --prefix`
-    GLIB_PREFIX=`$HAVEGLIB --prefix`
-
-    GTK_LIBS="$GTK_LIBS -L$GTK_PREFIX/lib$LIBSUFFIX -L$GLIB_PREFIX/lib$LIBSUFFIX -lgtk$GTK12 -lgdk$GTK12 $RDYNAMIC -lgmodule$GTK12 -lglib$GTK12"
-else
-    AC_MSG_ERROR([*** gtk-config not found. You need a working GTK+ 1.2 installation.])
-fi
 
 XMLVER=""
 
-AC_ARG_ENABLE(gtk2,
-[  --enable-gtk2            Use gtk2 support, not gtk1  [default=no]],
-              , enable_gtk2=no)
-if test x$enable_gtk2 = xyes; then
-
-    AC_DEFINE(ENABLE_GTK2, 1, GTK2 support.)
-
-    dnl Check for glade2 and gtk2 libraries
-
-    AC_PATH_PROG(HAVEPKGCONFIG, pkg-config, $PATH)
-
-    if test ! -z "$HAVEPKGCONFIG"; then
-        if $HAVEPKGCONFIG --exists libglade-2.0 gtk+-2.0 ; then
-            GTK2_CFLAGS=`$HAVEPKGCONFIG --cflags libglade-2.0 gtk+-2.0`
-            GTK2_LIBS=`$HAVEPKGCONFIG --libs libglade-2.0 gtk+-2.0`
-
-            dnl Pkg-config is supposed to add the export-dynamic, but it doesn't, at least on my system
-            LDFLAGS="$LDFLAGS -Wl,-export-dynamic"
-            CFLAGS="$CFLAGS $GTK2_CFLAGS"
-            if test ! -z "GLADE_STATIC"  ; then
-                GTK2_LIBS=`echo $GTK2_LIBS | sed "s/-lglade-2.0/$GLADE_STATIC -lglade-2.0 $BDYNAMIC/g"`
-            fi
-	    dnl Ignore unnecessary dependency on libpng12, not used by our binaries, creates problems with newer distros
-	    GTK2_LIBS=`echo $GTK2_LIBS | sed "s/-lpng12//g"`
-            GUI_LIBS="$GUI_LIBS $GTK2_LIBS"
-			SETUP_GTK="setup.gtk"
-			GTK_SUBDIR=gtk2
-			XMLVER="2"
-        else
-            AC_MSG_ERROR([*** Either libglade-2.0 or gtk+-2.0 are not available.])
-        fi
-    else
-        AC_MSG_ERROR([*** pkg-config not found. Cannot probe for libglade-2.0 or gtk+-2.0.])
-    fi
-
-else
-    CFLAGS="$CFLAGS $GLADE_CFLAGS $GTK_CFLAGS"
-    GUI_LIBS="$GUI_LIBS $GLADE_STATIC -L$GLADE_PREFIX/lib$LIBSUFFIX -lglade $BDYNAMIC $GTK_LIBS"
-fi
 
 AC_ARG_ENABLE(gtk3,
 [  --enable-gtk3            Use gtk3 support [default=yes]],
@@ -514,7 +493,6 @@ if test x$enable_gtk3 = xyes; then
     else
         AC_MSG_ERROR([*** pkg-config not found. Cannot probe for libglade-2.0 or gtk+-3.0.])
     fi
-
 else
     CFLAGS="$CFLAGS $GLADE_CFLAGS $GTK_CFLAGS"
     GUI_LIBS="$GUI_LIBS $GLADE_STATIC -L$GLADE_PREFIX/lib$LIBSUFFIX -lglade $BDYNAMIC $GTK_LIBS"
