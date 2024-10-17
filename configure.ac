@@ -46,22 +46,6 @@ if test x$enable_debug = xyes; then
     AC_DEFINE(DEBUG, 1, Debugging enabled.)
 fi
 
-AC_ARG_ENABLE(gtk3,
-              [  --enable-gtk3           Enable GTK+ 3.0 (Experimental)],
-              enable_gtk3=$enableval,
-              enable_gtk3="yes")
-
-
-AC_ARG_ENABLE(gtk4,
-              [  --enable-gtk4           Enable GTK+ 4.0 (Experimental)],
-              enable_gtk4=$enableval,
-              enable_gtk4="no")
-
-AC_ARG_WITH(libxml2,
-              [  --with-libxml2          use libxml2 [default=libxml1 unless GTK2 is enabled]],
-              with_libxml2="yes") 
-
-
 # Libtool conversion
 #AC_ENABLE_SHARED([])
 
@@ -494,16 +478,16 @@ if test x$enable_gtk3 = xyes; then
         AC_MSG_ERROR([*** pkg-config not found. Cannot probe for libglade-2.0 or gtk+-3.0.])
     fi
 else
-    CFLAGS="$CFLAGS $GLADE_CFLAGS $GTK_CFLAGS"
-    GUI_LIBS="$GUI_LIBS $GLADE_STATIC -L$GLADE_PREFIX/lib$LIBSUFFIX -lglade $BDYNAMIC $GTK_LIBS"
+    CFLAGS="$GTK_CFLAGS"
+    GUI_LIBS="$GUI_LIBS $BDYNAMIC $GTK_LIBS"
 fi
 
 
 dnl Look for the XML libraries
 
 AC_ARG_WITH(libxml2,
-[  --with-libxml2          use libxml2 [default=libxml1 unless GTK2 is enabled]],
-	,	with_libxml2=no)
+[  --with-libxml2          use libxml2 ],
+	,	with_libxml2=yes)
 if test x$with_libxml2 != xno; then
 	XMLVER="2"
 	EXTRA_LIBS="$EXTRA_LIBS -lm"
@@ -522,8 +506,8 @@ if test ! -z "$HAVEXML"; then
 		else
 			XML_LIBS="-lm"
 		fi
-	elif "$HAVEXML" --libs | grep thread > /dev/null; then
-		XML_LIBS="$PTHREAD -lm"
+	#elif "$HAVEXML" --libs | grep thread > /dev/null; then
+	#	XML_LIBS="$PTHREAD -lm"
 	fi
 
     CFLAGS="$CFLAGS $XML_CFLAGS"
@@ -532,13 +516,24 @@ if test ! -z "$HAVEXML"; then
         GUI_LIBS="$GUI_LIBS $XML_STATIC -L$XML_PREFIX/lib$LIBSUFFIX -lxml${XMLVER} $BDYNAMIC $XML_LIBS"
         CARBON_LIBS="$CARBON_LIBS -L$XML_PREFIX/lib$LIBSUFFIX -lxml${XMLVER} $XML_LIBS"
     else
-        LIBS="$LIBS $XML_PREFIX/lib$LIBSUFFIX/libxml${XMLVER}.a $XML_LIBS"
-        GUI_LIBS="$GUI_LIBS $XML_PREFIX/lib$LIBSUFFIX/libxml${XMLVER}.a $XML_LIBS"
-        CARBON_LIBS="$CARBON_LIBS $XML_PREFIX/lib$LIBSUFFIX/libxml${XMLVER}.a $XML_LIBS"
+        LIBS="$LIBS -lxml2 $XML_LIBS"
+        GUI_LIBS="$GUI_LIBS -lxml2 $XML_LIBS"
+        CARBON_LIBS="$CARBON_LIBS -lxml2 $XML_LIBS"
     fi
 else
     AC_MSG_ERROR([*** xml${XMLVER}-config not found. You need a working libxml${XMLVER} installation.])
 fi
+
+
+AC_ARG_ENABLE(gtk4,
+              [  --enable-gtk4           Enable GTK+ 4.0 (Experimental)],
+              enable_gtk4=$enableval,
+              enable_gtk4="no")
+
+AC_ARG_WITH(libxml2,
+              [  --with-libxml2          use libxml2 [default=libxml1 unless GTK2 is enabled]],
+              with_libxml2="yes") 
+
 
 if test x$HAVE_BZIP2_SUPPORT = xyes; then
   AC_DEFINE(HAVE_BZIP2_SUPPORT, 1, libbz2 support.)
@@ -681,18 +676,7 @@ fi
 
 if test ! -z "$USE_GPM"; then
 	AC_CHECK_HEADERS(gpm.h)
-	CONSOLE_LIBS="$CONSOLE_LIBS -lgpm $LIBDL"
-else
-	CONSOLE_LIBS="$CONSOLE_LIBS $LIBDL"
-fi
-
-X11_LIBS="\$(BDYNAMIC) $X_PRE_LIBS -L$x_libraries -lXi -lXext -lX11 -lm"
-GUI_LIBS="$GUI_LIBS $X11_LIBS"
-if test ! -z "$HAVEGTK"; then
-    GUI_LIBS="$GUI_LIBS $LIBDL"
-    GTK_LIBS="$GTK_LIBS \$(BDYNAMIC) $LIBDL $BSTATIC"
-fi
-
+	CONSOLE_LIBS=""
 dnl Check for various options
 
 dnl enable dynamic plugins ?
@@ -726,6 +710,7 @@ BRAND="$with_vendor"
 #              , enable_outrage=no)
 #if test x$enable_outrage = xyes; then
 #        CFLAGS="$CFLAGS -DOUTRAGE_SUPPORT"
+
 #        PLUGINS="$PLUGINS outrage.c"
 #        AC_DEFINE(ENABLE_OUTRAGE, 1, Outrage package decoder.)
 #fi

@@ -26,4 +26,5 @@ po/en@quot.header
 po/quot.sed
 po/remove-potcdate.sin
 po/insert-header.sin
-
+Makefile
+dialog/Makefile

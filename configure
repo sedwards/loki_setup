@@ -768,9 +768,6 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_debug
-enable_gtk3
-enable_gtk4
-with_libxml2
 with_x
 with_setupdb
 enable_bzip2
@@ -778,6 +775,9 @@ with_ncurses
 enable_libglade_static
 enable_libxml_static
 enable_libncurses_static
+enable_gtk3
+with_libxml2
+enable_gtk4
 enable_dialog
 enable_zip
 enable_uz2
@@ -1436,13 +1436,12 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug            enable debugging  default=no
-  --enable-gtk3           Enable GTK+ 3.0 (Experimental)
-  --enable-gtk4           Enable GTK+ 4.0 (Experimental)
   --enable-bzip2            enable bzip2 support  default=no
   --enable-libglade-static            whether to statically link libglade (default=no)
   --enable-libxml-static            whether to statically link libxml (default=no)
   --enable-libncurses-static            whether to statically link libncurses (default=yes)
   --enable-gtk3            Use gtk3 support default=yes
+  --enable-gtk4           Enable GTK+ 4.0 (Experimental)
   --enable-dialog           enable the ncurses/dialog UI default=yes
   --enable-zip              enable ZIP archives support  default=yes
   --enable-uz2              enable UZ2 archives support  default=yes
@@ -1454,10 +1453,11 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-libxml2          use libxml2 default=libxml1 unless GTK2 is enabled
   --with-x                use the X Window System
   --with-setupdb            with setupdb library at  default=../loki_setupdb
   --with-ncurses            specify ncurses library location
+  --with-libxml2          use libxml2
+  --with-libxml2          use libxml2 default=libxml1 unless GTK2 is enabled
   --with-image              specifiy the CD image path  default=../../spp/private/image
   --with-vendor             specify the vendor prefix  default=loki
 
@@ -5005,36 +5005,6 @@ printf "%s\n" "#define DEBUG 1" >>confdefs.h
 
 fi
 
-# Check whether --enable-gtk3 was given.
-if test ${enable_gtk3+y}
-then :
-  enableval=$enable_gtk3; enable_gtk3=$enableval
-else case e in #(
-  e) enable_gtk3="yes" ;;
-esac
-fi
-
-
-
-# Check whether --enable-gtk4 was given.
-if test ${enable_gtk4+y}
-then :
-  enableval=$enable_gtk4; enable_gtk4=$enableval
-else case e in #(
-  e) enable_gtk4="no" ;;
-esac
-fi
-
-
-
-# Check whether --with-libxml2 was given.
-if test ${with_libxml2+y}
-then :
-  withval=$with_libxml2; with_libxml2="yes"
-fi
-
-
-
 # Libtool conversion
 #AC_ENABLE_SHARED([])
 
@@ -5113,7 +5083,7 @@ if test ! -z "$HAVEXML"; then
         CARBON_LIBS="$CARBON_LIBS -l${XMLVER} $XML_LIBS"
     fi
 else
-    at_fn_error $? "*** xml${XMLVER}-config not found. You need a working libxml${XMLVER} installation." "$LINENO" 5 configure.ac:98
+    at_fn_error $? "*** xml${XMLVER}-config not found. You need a working libxml${XMLVER} installation." "$LINENO" 5 configure.ac:82
 fi
 
 
@@ -5248,7 +5218,7 @@ else case e in #(
   e) { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
 printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
 at_fn_error $? "C preprocessor \"$CPP\" fails sanity check
-See 'config.log' for more details" "$LINENO" 5 configure.ac:104; } ;;
+See 'config.log' for more details" "$LINENO" 5 configure.ac:88; } ;;
 esac
 fi
 
@@ -5275,7 +5245,7 @@ if test "x$with_x" = xno; then
   have_x=disabled
 else
   case $x_includes,$x_libraries in #(
-    *\'*) at_fn_error $? "cannot use X directory names containing '" "$LINENO" 5 configure.ac:104;; #(
+    *\'*) at_fn_error $? "cannot use X directory names containing '" "$LINENO" 5 configure.ac:88;; #(
     *,NONE | NONE,*) if test ${ac_cv_have_x+y}
 then :
   printf %s "(cached) " >&6
@@ -6283,7 +6253,7 @@ then :
   printf %s "(cached) " >&6
 else case e in #(
   e) test "$cross_compiling" = yes &&
-  at_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5 configure.ac:132
+  at_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5 configure.ac:116
 if test -r "/dev/ptmx"; then
   ac_cv_file__dev_ptmx=yes
 else
@@ -6307,7 +6277,7 @@ then :
   printf %s "(cached) " >&6
 else case e in #(
   e) test "$cross_compiling" = yes &&
-  at_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5 configure.ac:133
+  at_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5 configure.ac:117
 if test -r "/dev/pts"; then
   ac_cv_file__dev_pts=yes
 else
@@ -6331,7 +6301,7 @@ then :
   printf %s "(cached) " >&6
 else case e in #(
   e) test "$cross_compiling" = yes &&
-  at_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5 configure.ac:134
+  at_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5 configure.ac:118
 if test -r "/dev/ptc"; then
   ac_cv_file__dev_ptc=yes
 else
@@ -6977,13 +6947,13 @@ if test -f $SETUPDB/$ARCH/libsetupdb.a; then
         fi
     done
     if test x$SETUPDB_INCDIR = x; then
-        at_fn_error $? "*** $SSETUPDB_NAME headers not found. ***" "$LINENO" 5 configure.ac:332
+        at_fn_error $? "*** $SSETUPDB_NAME headers not found. ***" "$LINENO" 5 configure.ac:316
     else
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: SetupDB library found in $SETUPDB/$ARCH" >&5
 printf "%s\n" "SetupDB library found in $SETUPDB/$ARCH" >&6; }
     fi
 else
-    at_fn_error $? "*** Please compile $SETUPDB_NAME first!" "$LINENO" 5 configure.ac:337
+    at_fn_error $? "*** Please compile $SETUPDB_NAME first!" "$LINENO" 5 configure.ac:321
 fi
 
 CFLAGS="$CFLAGS -I$SETUPDB_INCDIR"
@@ -7423,8 +7393,8 @@ fi
   fi
 
   if test x$HAVE_BZIP2_SUPPORT = xno; then
-    printf "%s\n" "configure.ac:413: WARNING: *** libbz2 not found. bzip2 support has been disabled!" >&2
-    printf "%s\n" "configure.ac:414: WARNING: *** you can disable this warning with --disable-bzip2" >&2
+    printf "%s\n" "configure.ac:397: WARNING: *** libbz2 not found. bzip2 support has been disabled!" >&2
+    printf "%s\n" "configure.ac:398: WARNING: *** you can disable this warning with --disable-bzip2" >&2
   fi
 elif test x$enable_bzip2 = xdlopen; then
   HAVE_BZIP2_SUPPORT="yes"
@@ -7639,14 +7609,14 @@ fi
                         GTK_SUBDIR=gtk3
                         XMLVER="2"
         else
-            at_fn_error $? "*** Either libglade-2.0 or gtk+-3.0 are not available." "$LINENO" 5 configure.ac:491
+            at_fn_error $? "*** Either libglade-2.0 or gtk+-3.0 are not available." "$LINENO" 5 configure.ac:475
         fi
     else
-        at_fn_error $? "*** pkg-config not found. Cannot probe for libglade-2.0 or gtk+-3.0." "$LINENO" 5 configure.ac:494
+        at_fn_error $? "*** pkg-config not found. Cannot probe for libglade-2.0 or gtk+-3.0." "$LINENO" 5 configure.ac:478
     fi
 else
-    CFLAGS="$CFLAGS $GLADE_CFLAGS $GTK_CFLAGS"
-    GUI_LIBS="$GUI_LIBS $GLADE_STATIC -L$GLADE_PREFIX/lib$LIBSUFFIX -lglade $BDYNAMIC $GTK_LIBS"
+    CFLAGS="$GTK_CFLAGS"
+    GUI_LIBS="$GUI_LIBS $BDYNAMIC $GTK_LIBS"
 fi
 
 
@@ -7657,7 +7627,7 @@ if test ${with_libxml2+y}
 then :
   withval=$with_libxml2;
 else case e in #(
-  e) with_libxml2=no ;;
+  e) with_libxml2=yes ;;
 esac
 fi
 
@@ -7725,8 +7695,8 @@ if test ! -z "$HAVEXML"; then
 		else
 			XML_LIBS="-lm"
 		fi
-	elif "$HAVEXML" --libs | grep thread > /dev/null; then
-		XML_LIBS="$PTHREAD -lm"
+	#elif "$HAVEXML" --libs | grep thread > /dev/null; then
+	#	XML_LIBS="$PTHREAD -lm"
 	fi
 
     CFLAGS="$CFLAGS $XML_CFLAGS"
@@ -7735,13 +7705,33 @@ if test ! -z "$HAVEXML"; then
         GUI_LIBS="$GUI_LIBS $XML_STATIC -L$XML_PREFIX/lib$LIBSUFFIX -lxml${XMLVER} $BDYNAMIC $XML_LIBS"
         CARBON_LIBS="$CARBON_LIBS -L$XML_PREFIX/lib$LIBSUFFIX -lxml${XMLVER} $XML_LIBS"
     else
-        LIBS="$LIBS $XML_PREFIX/lib$LIBSUFFIX/libxml${XMLVER}.a $XML_LIBS"
-        GUI_LIBS="$GUI_LIBS $XML_PREFIX/lib$LIBSUFFIX/libxml${XMLVER}.a $XML_LIBS"
-        CARBON_LIBS="$CARBON_LIBS $XML_PREFIX/lib$LIBSUFFIX/libxml${XMLVER}.a $XML_LIBS"
+        LIBS="$LIBS -lxml2 $XML_LIBS"
+        GUI_LIBS="$GUI_LIBS -lxml2 $XML_LIBS"
+        CARBON_LIBS="$CARBON_LIBS -lxml2 $XML_LIBS"
     fi
 else
-    at_fn_error $? "*** xml${XMLVER}-config not found. You need a working libxml${XMLVER} installation." "$LINENO" 5 configure.ac:540
+    at_fn_error $? "*** xml${XMLVER}-config not found. You need a working libxml${XMLVER} installation." "$LINENO" 5 configure.ac:524
 fi
+
+
+# Check whether --enable-gtk4 was given.
+if test ${enable_gtk4+y}
+then :
+  enableval=$enable_gtk4; enable_gtk4=$enableval
+else case e in #(
+  e) enable_gtk4="no" ;;
+esac
+fi
+
+
+
+# Check whether --with-libxml2 was given.
+if test ${with_libxml2+y}
+then :
+  withval=$with_libxml2; with_libxml2="yes"
+fi
+
+
 
 if test x$HAVE_BZIP2_SUPPORT = xyes; then
 
@@ -7878,7 +7868,7 @@ fi
 
 if test x$enable_rpm4 = xyes; then
         if test x$HAVE_BZIP2_SUPPORT != xyes; then
-             at_fn_error $? "*** You need libbz2 to have RPM 4.x support." "$LINENO" 5 configure.ac:633
+             at_fn_error $? "*** You need libbz2 to have RPM 4.x support." "$LINENO" 5 configure.ac:628
         fi
         CFLAGS="$CFLAGS -DRPM_SUPPORT=4 -I/usr/include/rpm"
         PLUGINS="$PLUGINS rpm.c"
@@ -7984,18 +7974,7 @@ then :
 
 fi
 
-	CONSOLE_LIBS="$CONSOLE_LIBS -lgpm $LIBDL"
-else
-	CONSOLE_LIBS="$CONSOLE_LIBS $LIBDL"
-fi
-
-X11_LIBS="\$(BDYNAMIC) $X_PRE_LIBS -L$x_libraries -lXi -lXext -lX11 -lm"
-GUI_LIBS="$GUI_LIBS $X11_LIBS"
-if test ! -z "$HAVEGTK"; then
-    GUI_LIBS="$GUI_LIBS $LIBDL"
-    GTK_LIBS="$GTK_LIBS \$(BDYNAMIC) $LIBDL $BSTATIC"
-fi
-
+	CONSOLE_LIBS=""
 
 
 DYN_PLUGINS=false
@@ -8049,6 +8028,7 @@ BRAND="$with_vendor"
 #              , enable_outrage=no)
 #if test x$enable_outrage = xyes; then
 #        CFLAGS="$CFLAGS -DOUTRAGE_SUPPORT"
+
 #        PLUGINS="$PLUGINS outrage.c"
 #        AC_DEFINE(ENABLE_OUTRAGE, 1, Outrage package decoder.)
 #fi
@@ -8119,7 +8099,7 @@ _ACEOF
     case $ac_val in #(
     *${as_nl}*)
       case $ac_var in #(
-      *_cv_*) printf "%s\n" "configure.ac:771: WARNING: cache variable $ac_var contains a newline" >&2 ;;
+      *_cv_*) printf "%s\n" "configure.ac:756: WARNING: cache variable $ac_var contains a newline" >&2 ;;
       esac
       case $ac_var in #(
       _ | IFS | as_nl) ;; #(
@@ -8156,7 +8136,7 @@ _ACEOF
 if diff "$cache_file" confcache >/dev/null 2>&1; then :; else
   if test -w "$cache_file"; then
     if test "x$cache_file" != "x/dev/null"; then
-      printf "%s\n" "configure.ac:771: notice: updating cache $cache_file" >&2
+      printf "%s\n" "configure.ac:756: notice: updating cache $cache_file" >&2
       if test ! -f "$cache_file" || test -h "$cache_file"; then
 	cat confcache >"$cache_file"
       else
@@ -8170,7 +8150,7 @@ if diff "$cache_file" confcache >/dev/null 2>&1; then :; else
       fi
     fi
   else
-    printf "%s\n" "configure.ac:771: notice: not updating unwritable cache $cache_file" >&2
+    printf "%s\n" "configure.ac:756: notice: not updating unwritable cache $cache_file" >&2
   fi
 fi
 rm -f confcache
@@ -8237,7 +8217,7 @@ LTLIBOBJS=$ac_ltlibobjs
 ac_write_fail=0
 ac_clean_files_save=$ac_clean_files
 ac_clean_files="$ac_clean_files $CONFIG_STATUS"
-printf "%s\n" "configure.ac:771: notice: creating $CONFIG_STATUS" >&2
+printf "%s\n" "configure.ac:756: notice: creating $CONFIG_STATUS" >&2
 as_write_fail=0
 cat >$CONFIG_STATUS <<_ASEOF || as_write_fail=1
 #! $SHELL
@@ -8581,7 +8561,7 @@ printf "%s\n" X"$as_dir" |
       test -d "$as_dir" && break
     done
     test -z "$as_dirs" || eval "mkdir $as_dirs"
-  } || test -d "$as_dir" || at_fn_error $? "cannot create directory $as_dir" configure.ac:771
+  } || test -d "$as_dir" || at_fn_error $? "cannot create directory $as_dir" configure.ac:756
 
 
 } # as_fn_mkdir_p
@@ -8730,7 +8710,7 @@ do
     $ac_shift
     case $ac_optarg in
     *\'*) ac_optarg=`printf "%s\n" "$ac_optarg" | sed "s/'/'\\\\\\\\''/g"` ;;
-    '') at_fn_error $? "missing file argument" configure.ac:771 ;;
+    '') at_fn_error $? "missing file argument" configure.ac:756 ;;
     esac
     as_fn_append CONFIG_FILES " '$ac_optarg'"
     ac_need_defaults=false;;
@@ -8742,7 +8722,7 @@ do
 
   # This is an error.
   -*) at_fn_error $? "unrecognized option: '$1'
-Try '$0 --help' for more information." configure.ac:771 ;;
+Try '$0 --help' for more information." configure.ac:756 ;;
 
   *) as_fn_append ac_config_targets " $1"
      ac_need_defaults=false ;;
@@ -8794,7 +8774,7 @@ do
     "plugins/Makefile") CONFIG_FILES="$CONFIG_FILES plugins/Makefile" ;;
     "dialog/Makefile") CONFIG_FILES="$CONFIG_FILES dialog/Makefile" ;;
 
-  *) at_fn_error $? "invalid argument: '$ac_config_target'" "$LINENO" 5 configure.ac:771;;
+  *) at_fn_error $? "invalid argument: '$ac_config_target'" "$LINENO" 5 configure.ac:756;;
   esac
 done
 
@@ -8831,7 +8811,7 @@ $debug ||
 {
   tmp=./conf$$-$RANDOM
   (umask 077 && mkdir "$tmp")
-} || at_fn_error $? "cannot create a temporary directory in ." "$LINENO" 5 configure.ac:771
+} || at_fn_error $? "cannot create a temporary directory in ." "$LINENO" 5 configure.ac:756
 ac_tmp=$tmp
 
 # Set up the scripts for CONFIG_FILES section.
@@ -8863,18 +8843,18 @@ _ACEOF
   echo "$ac_subst_vars" | sed 's/.*/&!$&$ac_delim/' &&
   echo "_ACEOF"
 } >conf$$subs.sh ||
-  at_fn_error $? "could not make $CONFIG_STATUS" "$LINENO" 5 configure.ac:771
+  at_fn_error $? "could not make $CONFIG_STATUS" "$LINENO" 5 configure.ac:756
 ac_delim_num=`echo "$ac_subst_vars" | grep -c '^'`
 ac_delim='%!_!# '
 for ac_last_try in false false false false false :; do
   . ./conf$$subs.sh ||
-    at_fn_error $? "could not make $CONFIG_STATUS" "$LINENO" 5 configure.ac:771
+    at_fn_error $? "could not make $CONFIG_STATUS" "$LINENO" 5 configure.ac:756
 
   ac_delim_n=`sed -n "s/.*$ac_delim\$/X/p" conf$$subs.awk | grep -c X`
   if test $ac_delim_n = $ac_delim_num; then
     break
   elif $ac_last_try; then
-    at_fn_error $? "could not make $CONFIG_STATUS" "$LINENO" 5 configure.ac:771
+    at_fn_error $? "could not make $CONFIG_STATUS" "$LINENO" 5 configure.ac:756
   else
     ac_delim="$ac_delim!$ac_delim _$ac_delim!! "
   fi
@@ -8963,7 +8943,7 @@ if sed "s/$ac_cr//" < /dev/null > /dev/null 2>&1; then
 else
   cat
 fi < "$ac_tmp/subs1.awk" > "$ac_tmp/subs.awk" \
-  || at_fn_error $? "could not setup config files machinery" "$LINENO" 5 configure.ac:771
+  || at_fn_error $? "could not setup config files machinery" "$LINENO" 5 configure.ac:756
 _ACEOF
 
 # VPATH may cause trouble with some makes, so we remove sole $(srcdir),
@@ -9002,7 +8982,7 @@ do
   esac
   case $ac_mode$ac_tag in
   :[FHL]*:*);;
-  :L* | :C*:*) at_fn_error $? "invalid tag '$ac_tag'" "$LINENO" 5 configure.ac:771;;
+  :L* | :C*:*) at_fn_error $? "invalid tag '$ac_tag'" "$LINENO" 5 configure.ac:756;;
   :[FH]-) ac_tag=-:-;;
   :[FH]*) ac_tag=$ac_tag:$ac_tag.in;;
   esac
@@ -9030,7 +9010,7 @@ do
 	   [\\/$]*) false;;
 	   *) test -f "$srcdir/$ac_f" && ac_f="$srcdir/$ac_f";;
 	   esac ||
-	   at_fn_error 1 "cannot find input file: '$ac_f'" "$LINENO" 5 configure.ac:771;;
+	   at_fn_error 1 "cannot find input file: '$ac_f'" "$LINENO" 5 configure.ac:756;;
       esac
       case $ac_f in *\'*) ac_f=`printf "%s\n" "$ac_f" | sed "s/'/'\\\\\\\\''/g"`;; esac
       as_fn_append ac_file_inputs " '$ac_f'"
@@ -9044,7 +9024,7 @@ do
 	`' by configure.'
     if test x"$ac_file" != x-; then
       configure_input="$ac_file.  $configure_input"
-      printf "%s\n" "configure.ac:771: notice: creating $ac_file" >&2
+      printf "%s\n" "configure.ac:756: notice: creating $ac_file" >&2
     fi
     # Neutralize special characters interpreted by sed in replacement strings.
     case $configure_input in #(
@@ -9056,7 +9036,7 @@ do
 
     case $ac_tag in
     *:-:* | *:-) cat >"$ac_tmp/stdin" \
-      || at_fn_error $? "could not create $ac_file" "$LINENO" 5 configure.ac:771 ;;
+      || at_fn_error $? "could not create $ac_file" "$LINENO" 5 configure.ac:756 ;;
     esac
     ;;
   esac
@@ -9149,7 +9129,7 @@ ac_sed_dataroot='
 case `eval "sed -n \"\$ac_sed_dataroot\" $ac_file_inputs"` in
 *datarootdir*) ac_datarootdir_seen=yes;;
 *@datadir@*|*@docdir@*|*@infodir@*|*@localedir@*|*@mandir@*)
-  printf "%s\n" "configure.ac:771: WARNING: $ac_file_inputs seems to ignore the --datarootdir setting" >&2
+  printf "%s\n" "configure.ac:756: WARNING: $ac_file_inputs seems to ignore the --datarootdir setting" >&2
 _ACEOF
 cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
   ac_datarootdir_hack='
@@ -9186,13 +9166,13 @@ s&@INSTALL@&$ac_INSTALL&;t t
 $ac_datarootdir_hack
 "
 eval sed \"\$ac_sed_extra\" "$ac_file_inputs" | $AWK -f "$ac_tmp/subs.awk" \
-  >$ac_tmp/out || at_fn_error $? "could not create $ac_file" "$LINENO" 5 configure.ac:771
+  >$ac_tmp/out || at_fn_error $? "could not create $ac_file" "$LINENO" 5 configure.ac:756
 
 test -z "$ac_datarootdir_hack$ac_datarootdir_seen" &&
   { ac_out=`sed -n '/\${datarootdir}/p' "$ac_tmp/out"`; test -n "$ac_out"; } &&
   { ac_out=`sed -n '/^[	 ]*datarootdir[	 ]*:*=/p' \
       "$ac_tmp/out"`; test -z "$ac_out"; } &&
-  printf "%s\n" "configure.ac:771: WARNING: $ac_file contains a reference to the variable 'datarootdir'
+  printf "%s\n" "configure.ac:756: WARNING: $ac_file contains a reference to the variable 'datarootdir'
 which seems to be undefined.  Please make sure it is defined" >&2
 
   rm -f "$ac_tmp/stdin"
@@ -9200,7 +9180,7 @@ which seems to be undefined.  Please make sure it is defined" >&2
   -) cat "$ac_tmp/out" && rm -f "$ac_tmp/out";;
   *) rm -f "$ac_file" && mv "$ac_tmp/out" "$ac_file";;
   esac \
-  || at_fn_error $? "could not create $ac_file" "$LINENO" 5 configure.ac:771
+  || at_fn_error $? "could not create $ac_file" "$LINENO" 5 configure.ac:756
  ;;
 
 
@@ -9215,7 +9195,7 @@ _ACEOF
 ac_clean_files=$ac_clean_files_save
 
 test $ac_write_fail = 0 ||
-  at_fn_error $? "write failure creating $CONFIG_STATUS" "$LINENO" 5 configure.ac:771
+  at_fn_error $? "write failure creating $CONFIG_STATUS" "$LINENO" 5 configure.ac:756
 
 
 # configure is writing to config.log, and then calls config.status.
@@ -9239,7 +9219,7 @@ if test "$no_create" != yes; then
   $ac_cs_success || as_fn_exit 1
 fi
 if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
-  printf "%s\n" "configure.ac:771: WARNING: unrecognized options: $ac_unrecognized_opts" >&2
+  printf "%s\n" "configure.ac:756: WARNING: unrecognized options: $ac_unrecognized_opts" >&2
 fi
 
 
